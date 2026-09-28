@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "구진모 | 프로필",
-  description: "안녕하세요! 바이브코딩을 배우고 있는 대학생 구진모의 프로필입니다.",
+  description: "사용자 경험과 지속 가능한 코드를 고민하는 개발자 구진모의 프로필입니다.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
