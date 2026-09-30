@@ -1,26 +1,38 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ps-primary: #0070d1;
+  --ps-primary-pressed: #0064b7;
+  --ps-primary-active: #004d8d;
+  --ps-commerce: #d53b00;
+  --ps-commerce-pressed: #aa2f00;
+  --ps-canvas-dark: #000000;
+  --ps-canvas-light: #ffffff;
+  --ps-surface-dark-elevated: #121314;
+  --ps-surface-dark-card: #181818;
+  --ps-surface-card: #f5f7fa;
+  --ps-surface-soft: #f3f3f3;
+  --ps-hairline-light: #f3f3f3;
+  --ps-hairline-dark: rgba(229, 229, 229, 0.2);
+  --ps-ink: #000000;
+  --ps-body-light: rgba(0, 0, 0, 0.65);
+  --ps-body-dark: rgba(255, 255, 255, 0.72);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--ps-canvas-dark);
+  color: #ffffff;
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
