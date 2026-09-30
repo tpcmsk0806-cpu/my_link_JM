@@ -1,12 +1,14 @@
 import Image from "next/image";
 import {
   Mail,
-  ExternalLink,
+  ArrowUpRight,
   Code2,
   Sparkles,
   Layers,
   MapPin,
-  Laptop,
+  Terminal,
+  Cpu,
+  Flame,
 } from "lucide-react";
 
 function GithubIcon({ className = "w-5 h-5" }: { className?: string }) {
@@ -28,197 +30,270 @@ function GithubIcon({ className = "w-5 h-5" }: { className?: string }) {
 
 export default function ProfilePage() {
   const techStack = [
-    "Next.js",
-    "React",
-    "TypeScript",
-    "Tailwind CSS",
-    "Node.js",
-    "Git",
+    { name: "Next.js", bg: "bg-black text-white" },
+    { name: "React", bg: "bg-[#67E8F9] text-black" },
+    { name: "TypeScript", bg: "bg-[#93C5FD] text-black" },
+    { name: "Tailwind CSS", bg: "bg-[#A7F3D0] text-black" },
+    { name: "Node.js", bg: "bg-[#86EFAC] text-black" },
+    { name: "Git", bg: "bg-[#FCA5A5] text-black" },
   ];
 
   const highlights = [
     {
-      icon: <Code2 className="w-4 h-4 text-blue-500" />,
+      icon: <Code2 className="w-5 h-5 text-black" />,
       title: "Clean Code",
-      desc: "유지보수하기 쉬운 구조 지향",
+      desc: "유지보수와 확장을 고려한 탄탄한 구조",
+      bg: "bg-[#FEF08A]", // pastel yellow
     },
     {
-      icon: <Sparkles className="w-4 h-4 text-amber-500" />,
+      icon: <Sparkles className="w-5 h-5 text-black" />,
       title: "UI / UX",
-      desc: "직관적이고 매끄러운 사용자 경험",
+      desc: "직관적이고 매끄러운 유저 인터랙션",
+      bg: "bg-[#BAE6FD]", // pastel blue
     },
     {
-      icon: <Layers className="w-4 h-4 text-emerald-500" />,
+      icon: <Layers className="w-5 h-5 text-black" />,
       title: "Problem Solver",
-      desc: "기술을 통한 실질적 가치 창출",
+      desc: "기술을 통한 실질적 가치 창출과 해결",
+      bg: "bg-[#BBF7D0]", // pastel green
     },
   ];
 
   const links = [
     {
-      title: "GitHub",
-      desc: "github.com/tpcmsk0806-cpu",
+      title: "GitHub Profile",
+      desc: "프로젝트 소스코드 및 커밋 활동",
       href: "https://github.com/tpcmsk0806-cpu",
-      icon: <GithubIcon className="w-5 h-5 text-zinc-800 dark:text-zinc-200" />,
-      badge: "Projects",
+      icon: <GithubIcon className="w-6 h-6 text-black" />,
+      badge: "CODE",
+      badgeColor: "bg-[#FFE600]",
+      hoverBg: "hover:bg-[#FFF59D]",
     },
     {
-      title: "Email",
-      desc: "문의 및 협업 제안",
+      title: "Email Contact",
+      desc: "협업 문의 및 커피챗 제안",
       href: "mailto:contact@example.com",
-      icon: <Mail className="w-5 h-5 text-zinc-800 dark:text-zinc-200" />,
-      badge: "Contact",
+      icon: <Mail className="w-6 h-6 text-black" />,
+      badge: "HELLO",
+      badgeColor: "bg-[#A3E635]",
+      hoverBg: "hover:bg-[#D9F99D]",
     },
   ];
 
   return (
-    <main className="flex min-h-screen flex-1 flex-col items-center justify-center p-4 sm:p-6 md:p-10 bg-gradient-to-b from-zinc-50 via-zinc-100 to-zinc-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
-      {/* 반응형 카드 컨테이너 */}
-      <div className="w-full max-w-md sm:max-w-xl md:max-w-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md rounded-3xl shadow-xl shadow-zinc-900/5 border border-zinc-200/80 dark:border-zinc-800 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/5">
+    <main className="min-h-screen w-full bg-[#FFFDF0] dark:bg-[#121214] text-black dark:text-zinc-100 flex flex-col items-center justify-center p-3 sm:p-6 md:p-10 relative overflow-x-hidden">
+      
+      {/* 네오브루탈리즘 레트로 도트 배경 패턴 */}
+      <div 
+        className="fixed inset-0 pointer-events-none opacity-30 dark:opacity-20 bg-[radial-gradient(#000000_1.5px,transparent_1.5px)] dark:bg-[radial-gradient(#ffffff_1.5px,transparent_1.5px)] [background-size:20px_20px]" 
+        aria-hidden="true" 
+      />
+
+      {/* 상단 롤링 마키 뱃지 티커 */}
+      <div className="w-full max-w-2xl mb-4 z-10">
+        <div className="bg-[#FFE600] border-2 sm:border-[3px] border-black px-4 py-2 rounded-xl shadow-[4px_4px_0px_0px_#000] flex items-center justify-between gap-2 overflow-hidden text-xs sm:text-sm font-black tracking-wider uppercase">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500 border border-black animate-pulse" />
+            <span>PORTFOLIO // JINMO KU</span>
+          </div>
+          <span className="hidden sm:inline-block bg-black text-white px-2.5 py-0.5 rounded text-[11px] font-bold">
+            2026 EDITION
+          </span>
+          <div className="flex items-center gap-1.5 text-xs font-bold">
+            <Flame className="w-4 h-4 text-orange-600 fill-orange-500" />
+            <span>OPEN TO WORK</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 메인 프로필 카드 컨테이너 */}
+      <div className="w-full max-w-2xl bg-white dark:bg-zinc-900 border-[3px] border-black dark:border-black rounded-3xl shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_#27272a] overflow-hidden z-10 transition-all">
         
-        {/* 상단 배너 이미지 */}
-        <div className="relative w-full h-36 sm:h-44 md:h-48 overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
+        {/* 상단 배너 섹션 */}
+        <div className="relative w-full h-40 sm:h-48 md:h-52 border-b-[3px] border-black overflow-hidden bg-[#7C3AED]">
           <Image
             src="/images/banner.jpg"
-            alt="프로필 배경 배너"
+            alt="커버 배너"
             fill
             priority
-            className="object-cover object-center opacity-90 transition-transform duration-700 hover:scale-105"
+            className="object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+          {/* 배너 위 스티커들 */}
+          <div className="absolute top-3 left-3 bg-[#00F0FF] text-black border-2 border-black px-3 py-1 rounded-lg text-xs font-black shadow-[3px_3px_0px_0px_#000] rotate-[-2deg]">
+            🚀 NEXT.JS DEV
+          </div>
+          <div className="absolute top-3 right-3 bg-[#FF5D8F] text-white border-2 border-black px-3 py-1 rounded-lg text-xs font-black shadow-[3px_3px_0px_0px_#000] rotate-[3deg]">
+            ★ VIBE CODER
+          </div>
         </div>
 
-        {/* 프로필 본문 */}
-        <div className="px-6 pb-8 sm:px-8 sm:pb-10 -mt-16 sm:-mt-20 flex flex-col items-center text-center">
-          
-          {/* 아바타 이미지 & 온라인 뱃지 */}
-          <div className="relative group">
-            <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white dark:border-zinc-900 shadow-xl shadow-black/10 ring-1 ring-zinc-200/50 dark:ring-zinc-800 bg-white">
-              <Image
-                src="/images/avatar.jpg"
-                alt="구진모 프로필 사진"
-                fill
-                priority
-                className="object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-            </div>
-            <span
-              className="absolute bottom-2 right-2 w-5 h-5 rounded-full bg-emerald-500 border-3 border-white dark:border-zinc-900 shadow-sm"
-              title="온라인"
-            />
-          </div>
+        {/* 프로필 본문 영역 */}
+        <div className="p-5 sm:p-8">
 
-          {/* 이름 & 소속 */}
-          <div className="mt-4 flex flex-col items-center">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight flex items-center gap-2">
-              구진모
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/50">
-                PRO
-              </span>
-            </h1>
-
-            {/* 역할 및 부가 정보 태그 */}
-            <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200 border border-zinc-200/60 dark:border-zinc-700/60">
-                <Laptop className="w-3.5 h-3.5 text-indigo-500" />
-                Junior Software Developer
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400">
-                <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                Seoul, Korea
-              </span>
-            </div>
-          </div>
-
-          {/* 소개글 */}
-          <p className="mt-5 text-sm sm:text-base text-zinc-600 dark:text-zinc-300 leading-relaxed max-w-lg break-keep font-normal">
-            직관적인 사용자 경험과 지속 가능한 코드를 고민하는 개발자입니다. 새로운 기술을 탐구하고 문제를 해결하며 성장하는 과정을 즐깁니다.
-          </p>
-
-          {/* 핵심 강점 / 하이라이트 그리드 */}
-          <div className="w-full mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
-            {highlights.map((item, idx) => (
-              <div
-                key={idx}
-                className="p-3.5 rounded-2xl bg-zinc-50/80 dark:bg-zinc-800/50 border border-zinc-200/70 dark:border-zinc-800 transition-all hover:border-indigo-300 dark:hover:border-indigo-700/50 hover:bg-white dark:hover:bg-zinc-800"
+          {/* 아바타 & 기본 신상 헤더 */}
+          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 -mt-16 sm:-mt-20 mb-6">
+            {/* 아바타 이미지 (네오브루탈리즘 프레임) */}
+            <div className="relative group shrink-0">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-[3px] border-black bg-white shadow-[6px_6px_0px_0px_#000] rotate-[-1deg] group-hover:rotate-0 transition-transform">
+                <Image
+                  src="/images/avatar.jpg"
+                  alt="구진모 개발자 아바타"
+                  fill
+                  priority
+                  className="object-cover"
+                />
+              </div>
+              {/* 온라인 상태 인디케이터 스티커 */}
+              <div 
+                className="absolute -bottom-1 -right-1 bg-[#A3E635] text-black text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black shadow-[2px_2px_0px_0px_#000] flex items-center gap-1"
+                title="상시 온라인"
               >
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="p-1 rounded-md bg-white dark:bg-zinc-900 shadow-xs border border-zinc-200/60 dark:border-zinc-700/60">
+                <span className="w-2 h-2 rounded-full bg-black animate-ping" />
+                <span>ONLINE</span>
+              </div>
+            </div>
+
+            {/* 이름 및 직무 뱃지 */}
+            <div className="text-center sm:text-left flex-1">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-black dark:text-white">
+                  구진모
+                </h1>
+                <span className="bg-[#FFE600] text-black border-2 border-black px-2.5 py-0.5 rounded-md text-xs font-black shadow-[2px_2px_0px_0px_#000]">
+                  PRO DEV
+                </span>
+              </div>
+
+              {/* 뱃지 태그 바 */}
+              <div className="mt-2.5 flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs font-bold">
+                <span className="inline-flex items-center gap-1 bg-[#E0E7FF] dark:bg-indigo-950 text-indigo-950 dark:text-indigo-200 border-2 border-black px-2.5 py-1 rounded-lg shadow-[2px_2px_0px_0px_#000]">
+                  <Cpu className="w-3.5 h-3.5" />
+                  Junior Software Developer
+                </span>
+                <span className="inline-flex items-center gap-1 bg-white dark:bg-zinc-800 text-black dark:text-zinc-200 border-2 border-black px-2.5 py-1 rounded-lg shadow-[2px_2px_0px_0px_#000]">
+                  <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                  Seoul, Korea
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 소개글 노란색 메모 노트 블록 */}
+          <div className="relative bg-[#FEF08A] text-black border-[3px] border-black rounded-2xl p-4 sm:p-5 shadow-[5px_5px_0px_0px_#000] rotate-[-0.5deg] mb-7">
+            <div className="absolute -top-3 left-4 bg-black text-[#FEF08A] text-[10px] font-black px-2.5 py-0.5 rounded uppercase tracking-wider">
+              📌 About Me
+            </div>
+            <p className="mt-1 text-sm sm:text-base font-bold leading-relaxed break-keep">
+              직관적인 사용자 경험과 지속 가능한 코드를 고민하는 개발자입니다. 새로운 기술을 탐구하고 문제를 해결하며 성장하는 과정을 즐깁니다.
+            </p>
+          </div>
+
+          {/* 핵심 강점 3단 그리드 (컬러풀 카드) */}
+          <div className="mb-7">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="bg-black text-white text-xs font-black px-2.5 py-1 rounded-md">
+                ⚡ FOCUS AREAS
+              </span>
+              <div className="h-0.5 flex-1 bg-black/10 dark:bg-white/10" />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {highlights.map((item, idx) => (
+                <div
+                  key={idx}
+                  className={`${item.bg} text-black border-2 border-black rounded-2xl p-4 shadow-[4px_4px_0px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_#000] transition-all`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-white border-2 border-black shadow-[2px_2px_0px_0px_#000] flex items-center justify-center mb-2.5">
                     {item.icon}
                   </div>
-                  <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
-                    {item.title}
-                  </span>
+                  <h3 className="font-black text-sm mb-1">{item.title}</h3>
+                  <p className="text-xs font-semibold leading-snug text-zinc-800">
+                    {item.desc}
+                  </p>
                 </div>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
-                  {item.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* 기술 스택 뱃지 목록 */}
-          <div className="w-full mt-6 flex flex-col items-center">
-            <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-2.5">
-              Tech Stack
-            </span>
-            <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 max-w-md">
-              {techStack.map((tech) => (
-                <span
-                  key={tech}
-                  className="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100/90 dark:bg-zinc-800/70 text-zinc-700 dark:text-zinc-300 border border-zinc-200/60 dark:border-zinc-700/60 transition-colors hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-600"
-                >
-                  {tech}
-                </span>
               ))}
             </div>
           </div>
 
-          {/* 링크 & 소셜 섹션 */}
-          <div className="w-full mt-6 space-y-2.5">
+          {/* 기술 스택 칩스 */}
+          <div className="mb-7">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="bg-black text-white text-xs font-black px-2.5 py-1 rounded-md">
+                🛠 TECH STACK
+              </span>
+              <div className="h-0.5 flex-1 bg-black/10 dark:bg-white/10" />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {techStack.map((tech) => (
+                <div
+                  key={tech.name}
+                  className={`${tech.bg} border-2 border-black font-black text-xs px-3.5 py-1.5 rounded-xl shadow-[3px_3px_0px_0px_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_0px_#000] transition-all cursor-default select-none`}
+                >
+                  {tech.name}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 소셜 및 액션 링크 버튼들 */}
+          <div className="mb-7 space-y-3">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="bg-black text-white text-xs font-black px-2.5 py-1 rounded-md">
+                🔗 CONNECT & LINKS
+              </span>
+              <div className="h-0.5 flex-1 bg-black/10 dark:bg-white/10" />
+            </div>
+
             {links.map((link, idx) => (
               <a
                 key={idx}
                 href={link.href}
                 target={link.href.startsWith("http") ? "_blank" : undefined}
                 rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                className="group flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-zinc-50/90 dark:bg-zinc-800/60 hover:bg-zinc-100/90 dark:hover:bg-zinc-800 border border-zinc-200/70 dark:border-zinc-700/60 transition-all hover:scale-[1.01] active:scale-[0.99] hover:border-zinc-300 dark:hover:border-zinc-600 shadow-xs"
+                className={`group flex items-center justify-between p-4 bg-white dark:bg-zinc-800 text-black dark:text-white border-[3px] border-black rounded-2xl shadow-[5px_5px_0px_0px_#000] ${link.hoverBg} hover:text-black hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0px_0px_#000] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all`}
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800 shadow-xs group-hover:scale-105 transition-transform">
+                  <div className="w-10 h-10 rounded-xl bg-white border-2 border-black shadow-[2px_2px_0px_0px_#000] flex items-center justify-center group-hover:scale-105 transition-transform">
                     {link.icon}
                   </div>
                   <div className="text-left">
-                    <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                    <div className="font-black text-sm sm:text-base flex items-center gap-2">
                       {link.title}
-                      {link.badge && (
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/50">
-                          {link.badge}
-                        </span>
-                      )}
+                      <span className={`${link.badgeColor} text-black text-[10px] font-black px-2 py-0.5 rounded border border-black shadow-[1px_1px_0px_0px_#000]`}>
+                        {link.badge}
+                      </span>
                     </div>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400 group-hover:text-black">
                       {link.desc}
                     </p>
                   </div>
                 </div>
-                <ExternalLink className="w-4 h-4 text-zinc-400 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-colors" />
+                <div className="w-8 h-8 rounded-lg bg-black text-white group-hover:bg-white group-hover:text-black border-2 border-black flex items-center justify-center transition-colors">
+                  <ArrowUpRight className="w-4 h-4" />
+                </div>
               </a>
             ))}
           </div>
 
-          {/* 하단 구분선 및 상태 문구 */}
-          <div className="w-full mt-7 pt-5 border-t border-zinc-100 dark:border-zinc-800/80 flex flex-col items-center gap-2">
-            <p className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-              <span>아이디어를 코드로 실현해 나갑니다 🚀</span>
-            </p>
-            <p className="text-[11px] text-zinc-400 dark:text-zinc-600">
-              © 2026 Jinmo Ku. All rights reserved.
-            </p>
+          {/* 레트로 터미널 상태 바 */}
+          <div className="bg-[#18181B] text-[#4ADE80] border-[2px] border-black rounded-xl p-3 font-mono text-xs shadow-[4px_4px_0px_0px_#000] flex items-center gap-2">
+            <Terminal className="w-4 h-4 text-[#4ADE80] shrink-0" />
+            <span className="text-zinc-400">$</span>
+            <span className="font-bold truncate">
+              git commit -m &quot;아이디어를 코드로 실현해 나갑니다 🚀&quot;
+            </span>
           </div>
 
         </div>
+
+        {/* 하단 푸터 바 */}
+        <div className="border-t-[3px] border-black bg-[#F4F4F5] dark:bg-zinc-800 p-3.5 text-center text-xs font-black tracking-tight text-zinc-700 dark:text-zinc-300">
+          <span>⚡ CRAFTED WITH NEOBRUTALISM & VIBE CODING ✦ © 2026 JINMO KU</span>
+        </div>
+
       </div>
+
     </main>
   );
 }
