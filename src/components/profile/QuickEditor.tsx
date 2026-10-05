@@ -20,35 +20,24 @@ import {
   X,
   ExternalLink,
 } from "lucide-react";
+import AddLinkDialog from "./AddLinkDialog";
 
 interface QuickEditorProps {
   onClose: () => void;
+  onOpenAddDialog?: () => void;
 }
 
-export default function QuickEditor({ onClose }: QuickEditorProps) {
+export default function QuickEditor({ onClose, onOpenAddDialog }: QuickEditorProps) {
   const store = useProfileStore();
 
   const [activeTab, setActiveTab] = useState<"links" | "profile" | "appearance">("links");
-
-  // New link form states
-  const [newTitle, setNewTitle] = useState("");
-  const [newUrl, setNewUrl] = useState("");
-  const [isAdding, setIsAdding] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   // Edit link form states
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editUrl, setEditUrl] = useState("");
 
-  const handleAddLink = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim() || !newUrl.trim()) return;
-
-    store.addLink(newTitle, newUrl);
-    setNewTitle("");
-    setNewUrl("");
-    setIsAdding(false);
-  };
 
   const startEditLink = (linkId: string, title: string, url: string) => {
     setEditingLinkId(linkId);
@@ -136,78 +125,26 @@ export default function QuickEditor({ onClose }: QuickEditorProps) {
         {/* ==================== 1. LINKS TAB ==================== */}
         {activeTab === "links" && (
           <div className="space-y-4">
-            {/* Add Link Section */}
-            {!isAdding ? (
-              <button
-                onClick={() => setIsAdding(true)}
-                className="w-full py-3 px-4 rounded-xl border-2 border-dashed border-cyan-400 dark:border-cyan-700 bg-cyan-50/50 dark:bg-cyan-950/20 text-cyan-700 dark:text-cyan-300 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-cyan-100/50 dark:hover:bg-cyan-900/30 transition-all active:scale-[0.99]"
-              >
-                <Plus className="w-4 h-4" />
-                <span>새 링크 추가하기</span>
-              </button>
-            ) : (
-              <form
-                onSubmit={handleAddLink}
-                className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 dark:text-zinc-300">
-                    새 링크 등록
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsAdding(false)}
-                    className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
-                  >
-                    취소
-                  </button>
-                </div>
+            {/* Add Link Section via Dialog */}
+            <button
+              onClick={() => {
+                if (onOpenAddDialog) {
+                  onOpenAddDialog();
+                } else {
+                  setIsAddDialogOpen(true);
+                }
+              }}
+              className="w-full py-3.5 px-4 rounded-2xl border-2 border-dashed border-cyan-400 dark:border-cyan-700 bg-cyan-50/50 dark:bg-cyan-950/20 text-cyan-700 dark:text-cyan-300 font-bold text-sm flex items-center justify-center gap-2 hover:bg-cyan-100/60 dark:hover:bg-cyan-900/40 transition-all active:scale-[0.99] shadow-sm hover:shadow"
+            >
+              <Plus className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+              <span>새 링크 추가하기 (다이얼로그)</span>
+            </button>
 
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-500 dark:text-zinc-400 mb-1">
-                    버튼 제목 (이모지 포함 권장)
-                  </label>
-                  <input
-                    type="text"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    placeholder="예: 🛍️ 2026 다이어리 마켓"
-                    required
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-500 dark:text-zinc-400 mb-1">
-                    연결 URL
-                  </label>
-                  <input
-                    type="text"
-                    value={newUrl}
-                    onChange={(e) => setNewUrl(e.target.value)}
-                    placeholder="https://smartstore.naver.com/..."
-                    required
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setIsAdding(false)}
-                    className="px-3 py-1.5 text-xs rounded-lg text-slate-600 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700"
-                  >
-                    닫기
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm"
-                  >
-                    등록 완료
-                  </button>
-                </div>
-              </form>
-            )}
+            {/* Add Link Modal Dialog */}
+            <AddLinkDialog
+              open={isAddDialogOpen}
+              onOpenChange={setIsAddDialogOpen}
+            />
 
             {/* Links List */}
             <div className="space-y-2.5">

@@ -7,14 +7,25 @@ import { getTheme } from "@/lib/themes";
 import ProfileHeader from "./ProfileHeader";
 import LinkCard from "./LinkCard";
 import QuickEditor from "./QuickEditor";
-import { Share2, Edit3, Eye, Sparkles, Check, Link as LinkIcon } from "lucide-react";
+import AddLinkDialog from "./AddLinkDialog";
+import {
+  Share2,
+  Edit3,
+  Eye,
+  Sparkles,
+  Check,
+  Link as LinkIcon,
+  Plus,
+} from "lucide-react";
 
 export default function ProfilePageView() {
   const isHydrated = useIsHydrated();
   const store = useProfileStore();
 
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [copiedToast, setCopiedToast] = useState(false);
+  const [addedToastMessage, setAddedToastMessage] = useState<string | null>(null);
 
   const theme = getTheme(store.themeId);
 
@@ -50,6 +61,11 @@ export default function ProfilePageView() {
     store.recordClick(linkId);
   };
 
+  const handleAddSuccess = (newTitle: string) => {
+    setAddedToastMessage(`‘${newTitle}’ 링크가 로컬 상태에 추가되었습니다! 🎉`);
+    setTimeout(() => setAddedToastMessage(null), 3000);
+  };
+
   if (!isHydrated) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-zinc-950">
@@ -69,11 +85,19 @@ export default function ProfilePageView() {
         color: theme.textColor,
       }}
     >
-      {/* Toast Notification */}
+      {/* Toast Notification (Copy URL) */}
       {copiedToast && (
         <div className="fixed top-5 z-50 animate-bounce flex items-center gap-2 px-4 py-2.5 rounded-full bg-slate-900 text-white text-xs font-bold shadow-2xl border border-white/20">
           <Check className="w-4 h-4 text-emerald-400" />
           <span>링크가 클립보드에 복사되었습니다! 🎉</span>
+        </div>
+      )}
+
+      {/* Toast Notification (Link Added) */}
+      {addedToastMessage && (
+        <div className="fixed top-5 z-50 animate-in fade-in slide-in-from-top-3 duration-300 flex items-center gap-2 px-4 py-2.5 rounded-full bg-cyan-900 text-white text-xs font-bold shadow-2xl border border-cyan-400/40">
+          <Check className="w-4 h-4 text-cyan-300" />
+          <span>{addedToastMessage}</span>
         </div>
       )}
 
@@ -86,7 +110,18 @@ export default function ProfilePageView() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Quick Add Link Button in Header */}
+          <button
+            onClick={() => setIsAddDialogOpen(true)}
+            className="px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 bg-[#0070d1] hover:bg-[#0064b7] active:bg-[#004d8d] text-white shadow-sm shadow-[#0070d1]/25 active:scale-95 transition-all"
+            title="새 링크 추가하기 다이얼로그 열기"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span className="hidden sm:inline">링크 추가</span>
+            <span className="sm:hidden">추가</span>
+          </button>
+
           {/* Edit Mode Toggle Button */}
           <button
             onClick={() => setIsEditMode(!isEditMode)}
@@ -126,7 +161,10 @@ export default function ProfilePageView() {
         {/* Quick Editor Panel (When in Edit Mode) */}
         {isEditMode && (
           <div className="w-full mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
-            <QuickEditor onClose={() => setIsEditMode(false)} />
+            <QuickEditor
+              onClose={() => setIsEditMode(false)}
+              onOpenAddDialog={() => setIsAddDialogOpen(true)}
+            />
           </div>
         )}
 
@@ -140,19 +178,36 @@ export default function ProfilePageView() {
           socialLinks={store.socialLinks}
         />
 
+        {/* Primary Add Link CTA Button (Relocated to top & Styled with Primary Color) */}
+        <div className="w-full mb-3">
+          <button
+            type="button"
+            onClick={() => setIsAddDialogOpen(true)}
+            className={`w-full py-4 px-5 flex items-center justify-center gap-2.5 font-bold text-sm sm:text-base text-white bg-[#0070d1] hover:bg-[#0064b7] active:bg-[#004d8d] transition-all duration-200 shadow-lg shadow-[#0070d1]/30 hover:shadow-xl hover:shadow-[#0070d1]/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] cursor-pointer ${
+              store.buttonShape === "pill"
+                ? "rounded-full"
+                : store.buttonShape === "sharp"
+                ? "rounded-none"
+                : "rounded-2xl"
+            }`}
+          >
+            <div className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center">
+              <Plus className="w-3.5 h-3.5 text-white stroke-[3]" />
+            </div>
+            <span>새 링크 추가하기</span>
+          </button>
+        </div>
+
         {/* Link Blocks List */}
         <div className="w-full flex flex-col gap-3.5 my-2">
           {visibleLinks.length === 0 ? (
-            <div className="py-12 px-4 text-center rounded-2xl border border-dashed border-black/15 dark:border-white/15 my-4">
+            <div className="py-12 px-4 text-center rounded-2xl border border-dashed border-black/15 dark:border-white/15 my-2">
               <p className="text-sm font-semibold opacity-75 mb-2">
                 등록된 링크가 없습니다.
               </p>
-              <button
-                onClick={() => setIsEditMode(true)}
-                className="text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:underline inline-flex items-center gap-1"
-              >
-                <span>[편집 모드]를 켜서 새 링크를 등록해보세요!</span>
-              </button>
+              <p className="text-xs text-slate-400 dark:text-zinc-500">
+                위의 [새 링크 추가하기] 버튼을 눌러 첫 번째 링크를 등록해보세요!
+              </p>
             </div>
           ) : (
             visibleLinks.map((link) => (
@@ -175,6 +230,13 @@ export default function ProfilePageView() {
           )}
         </div>
       </main>
+
+      {/* Global Add Link Dialog */}
+      <AddLinkDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onSuccess={handleAddSuccess}
+      />
 
       {/* Footer Branding */}
       <footer className="w-full max-w-md py-6 px-4 flex flex-col items-center justify-center gap-2">
