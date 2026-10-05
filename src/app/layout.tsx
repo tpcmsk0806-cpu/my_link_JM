@@ -13,17 +13,27 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "구진모 | 프로필",
-  description: "사용자 경험과 지속 가능한 코드를 고민하는 개발자 구진모의 프로필입니다.",
+  title: "마이링크 (MyLink) — 모든 나를 하나로 연결하는 링크인바이오",
+  description:
+    "인스타그램, 유튜브, 깃허브, 쇼핑몰 등 당신의 모든 링크를 모바일에 최적화된 단 하나의 페이지로 통합하세요. 실시간 미리보기와 6가지 프리셋 테마 지원.",
+  openGraph: {
+    title: "마이링크 (MyLink) — 모바일 최적화 링크인바이오",
+    description: "세상의 모든 나를 하나의 링크로 연결하세요.",
+    type: "website",
+  },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-black text-white">{children}</body>
     </html>
   );
 }
