@@ -1,53 +1,23 @@
 "use client";
 
 import * as React from "react";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface DialogProps {
+export function Dialog({
+  open,
+  onOpenChange,
+  children,
+}: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
-}
-
-export function Dialog({ open, onOpenChange, children }: DialogProps) {
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) {
-        onOpenChange(false);
-      }
-    };
-    if (open) {
-      document.body.style.overflow = "hidden";
-      window.addEventListener("keydown", handleKeyDown);
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, onOpenChange]);
-
-  if (!open) return null;
-
+}) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
-      role="dialog"
-      aria-modal="true"
-    >
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200 animate-in fade-in"
-        onClick={() => onOpenChange(false)}
-      />
-
-      {/* Content wrapper */}
-      <div className="relative z-50 w-full max-w-lg transition-all animate-in fade-in zoom-in-95 duration-200">
-        {children}
-      </div>
-    </div>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      {children}
+    </DialogPrimitive.Root>
   );
 }
 
@@ -61,24 +31,28 @@ export function DialogContent({
   onClose?: () => void;
 }) {
   return (
-    <div
-      className={cn(
-        "relative w-full rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 shadow-2xl overflow-hidden",
-        className
-      )}
-    >
-      {onClose && (
-        <button
-          onClick={onClose}
-          type="button"
-          aria-label="닫기"
-          className="absolute top-5 right-5 p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-200 animate-in fade-in" />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 pointer-events-none">
+        <DialogPrimitive.Popup
+          className={cn(
+            "pointer-events-auto relative w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200",
+            className
+          )}
         >
-          <X className="w-5 h-5" />
-        </button>
-      )}
-      {children}
-    </div>
+          {onClose && (
+            <DialogPrimitive.Close
+              onClick={onClose}
+              aria-label="닫기"
+              className="absolute top-5 right-5 p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </DialogPrimitive.Close>
+          )}
+          {children}
+        </DialogPrimitive.Popup>
+      </div>
+    </DialogPrimitive.Portal>
   );
 }
 
@@ -104,14 +78,14 @@ export function DialogTitle({
   children: React.ReactNode;
 }) {
   return (
-    <h3
+    <DialogPrimitive.Title
       className={cn(
         "text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white",
         className
       )}
     >
       {children}
-    </h3>
+    </DialogPrimitive.Title>
   );
 }
 
@@ -123,14 +97,14 @@ export function DialogDescription({
   children: React.ReactNode;
 }) {
   return (
-    <p
+    <DialogPrimitive.Description
       className={cn(
         "text-xs sm:text-sm text-slate-500 dark:text-zinc-400 leading-relaxed",
         className
       )}
     >
       {children}
-    </p>
+    </DialogPrimitive.Description>
   );
 }
 
