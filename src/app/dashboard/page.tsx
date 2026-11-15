@@ -22,6 +22,7 @@ import PhoneMockup from "@/components/PhoneMockup";
 import SortableLinkItem from "@/components/SortableLinkItem";
 import { THEMES } from "@/lib/themes";
 import { Profile, LinkItem, ButtonShape, ButtonStyle, AnalyticsSummary } from "@/types";
+import { validateTitle, validateUrl } from "@/lib/validation";
 import {
   Link2,
   ExternalLink,
@@ -40,6 +41,9 @@ import {
   Check,
   Mail,
   X,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { Instagram, Youtube, Github, Twitter, Linkedin } from "@/components/SocialIcons";
 
@@ -60,10 +64,19 @@ export default function DashboardPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isAddingLink, setIsAddingLink] = useState(false);
 
-  // New Link inputs
+  // New Link inputs & validation states
   const [newTitle, setNewTitle] = useState("");
   const [newUrl, setNewUrl] = useState("");
+  const [addTouchedTitle, setAddTouchedTitle] = useState(false);
+  const [addTouchedUrl, setAddTouchedUrl] = useState(false);
+  const [addAttempted, setAddAttempted] = useState(false);
+
+  const addTitleVal = validateTitle(newTitle);
+  const addUrlVal = validateUrl(newUrl);
+  const isAddFormValid = addTitleVal.isValid && addUrlVal.isValid;
 
   // Sensors for Drag & Drop
   const sensors = useSensors(
@@ -118,16 +131,19 @@ export default function DashboardPage() {
   // Add Link
   const handleAddLink = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile || !newTitle.trim() || !newUrl.trim()) return;
+    setAddAttempted(true);
+    if (!profile || !isAddFormValid || isAddingLink) return;
 
     try {
+      setIsAddingLink(true);
+      setIsSyncing(true);
       const res = await fetch("/api/links", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           profileId: profile.id,
           title: newTitle.trim(),
-          url: newUrl.trim(),
+          url: addUrlVal.formattedUrl,
         }),
       });
 
@@ -136,10 +152,16 @@ export default function DashboardPage() {
         setLinks((prev) => [...prev, data.link]);
         setNewTitle("");
         setNewUrl("");
+        setAddTouchedTitle(false);
+        setAddTouchedUrl(false);
+        setAddAttempted(false);
         setShowAddModal(false);
       }
     } catch (err) {
       console.error("Add link error:", err);
+    } finally {
+      setIsAddingLink(false);
+      setIsSyncing(false);
     }
   };
 
@@ -151,6 +173,7 @@ export default function DashboardPage() {
     );
 
     try {
+      setIsSyncing(true);
       await fetch("/api/links", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -158,6 +181,8 @@ export default function DashboardPage() {
       });
     } catch (err) {
       console.error("Update link error:", err);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -166,11 +191,14 @@ export default function DashboardPage() {
     setLinks((prev) => prev.filter((l) => l.id !== id));
 
     try {
+      setIsSyncing(true);
       await fetch(`/api/links?id=${id}`, {
         method: "DELETE",
       });
     } catch (err) {
       console.error("Delete link error:", err);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -186,6 +214,7 @@ export default function DashboardPage() {
     setLinks(reordered);
 
     try {
+      setIsSyncing(true);
       await fetch("/api/links", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -196,6 +225,8 @@ export default function DashboardPage() {
       });
     } catch (err) {
       console.error("Reorder error:", err);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -271,6 +302,14 @@ export default function DashboardPage() {
                 <ExternalLink className="w-3.5 h-3.5" />
               </Link>
             </div>
+
+            {/* Syncing Loading Indicator */}
+            {isSyncing && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-950/60 border border-cyan-800 text-cyan-400 text-xs font-medium animate-pulse">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                <span>갱신 중...</span>
+              </div>
+            )}
           </div>
 
           {/* Quick Analytics Summary */}
@@ -829,48 +868,135 @@ export default function DashboardPage() {
               방문자에게 보여줄 제목과 연결할 웹사이트 주소를 입력하세요.
             </p>
 
-            <form onSubmit={handleAddLink} className="flex flex-col gap-4">
+            <form onSubmit={handleAddLink} className="flex flex-col gap-4" noValidate>
               <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
-                  버튼 제목
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="예: 2026 포트폴리오 구경하기 🎨"
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500"
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1">
+                    <span>버튼 제목</span>
+                    <span className="text-rose-500">*</span>
+                  </label>
+                  <span
+                    className={`text-[11px] font-mono transition-colors ${
+                      newTitle.length > 40
+                        ? "text-rose-500 font-bold"
+                        : newTitle.length >= 35
+                        ? "text-amber-400"
+                        : "text-zinc-500"
+                    }`}
+                  >
+                    {newTitle.length}/40자
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    onBlur={() => setAddTouchedTitle(true)}
+                    placeholder="예: 2026 포트폴리오 구경하기 🎨"
+                    maxLength={45}
+                    className={`w-full bg-zinc-950 border rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none transition-all placeholder:text-zinc-600 ${
+                      (addTouchedTitle || addAttempted) && !addTitleVal.isValid
+                        ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                        : addTouchedTitle && addTitleVal.isValid
+                        ? "border-emerald-500/70 focus:border-emerald-400"
+                        : "border-zinc-800 focus:border-cyan-500"
+                    }`}
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    {(addTouchedTitle || addAttempted) && !addTitleVal.isValid ? (
+                      <AlertCircle className="w-4 h-4 text-rose-500" />
+                    ) : addTouchedTitle && addTitleVal.isValid ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    ) : null}
+                  </div>
+                </div>
+                {(addTouchedTitle || addAttempted) && !addTitleVal.isValid && (
+                  <p className="mt-1 text-xs text-rose-400 font-medium flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{addTitleVal.error}</span>
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
-                  URL 주소
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newUrl}
-                  onChange={(e) => setNewUrl(e.target.value)}
-                  placeholder="https://mywebsite.com"
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 font-mono"
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1">
+                    <span>URL 주소</span>
+                    <span className="text-rose-500">*</span>
+                  </label>
+                  {addUrlVal.isValid && addUrlVal.isCorrected && (
+                    <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-0.5">
+                      <Check className="w-3 h-3" /> https:// 자동 적용됨
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={newUrl}
+                    onChange={(e) => setNewUrl(e.target.value)}
+                    onBlur={() => setAddTouchedUrl(true)}
+                    placeholder="example.com 또는 https://..."
+                    className={`w-full bg-zinc-950 border rounded-xl px-4 py-2.5 text-sm text-white font-mono focus:outline-none transition-all placeholder:text-zinc-600 ${
+                      (addTouchedUrl || addAttempted) && !addUrlVal.isValid
+                        ? "border-rose-500 bg-rose-500/5 focus:border-rose-500"
+                        : addTouchedUrl && addUrlVal.isValid
+                        ? "border-emerald-500/70 focus:border-emerald-400"
+                        : "border-zinc-800 focus:border-cyan-500"
+                    }`}
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    {(addTouchedUrl || addAttempted) && !addUrlVal.isValid ? (
+                      <AlertCircle className="w-4 h-4 text-rose-500" />
+                    ) : addTouchedUrl && addUrlVal.isValid ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <Link2 className="w-4 h-4 text-zinc-500" />
+                    )}
+                  </div>
+                </div>
+                {(addTouchedUrl || addAttempted) && !addUrlVal.isValid && (
+                  <p className="mt-1 text-xs text-rose-400 font-medium flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{addUrlVal.error}</span>
+                  </p>
+                )}
+                {newUrl.trim() && addUrlVal.isValid && addUrlVal.isCorrected && (
+                  <p className="mt-1 text-[11px] text-zinc-400">
+                    저장될 주소: <span className="font-mono text-cyan-400">{addUrlVal.formattedUrl}</span>
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-3 mt-4">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setNewTitle("");
+                    setNewUrl("");
+                    setAddTouchedTitle(false);
+                    setAddTouchedUrl(false);
+                    setAddAttempted(false);
+                  }}
                   className="flex-1 py-3 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-sm transition-colors"
                 >
                   취소
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/20 transition-all"
+                  disabled={!isAddFormValid || isAddingLink}
+                  className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-60 text-white font-semibold text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
                 >
-                  링크 추가하기
+                  {isAddingLink ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>추가 중...</span>
+                    </>
+                  ) : (
+                    <span>링크 추가하기</span>
+                  )}
                 </button>
               </div>
             </form>

@@ -273,6 +273,7 @@ export function addLink(profileId: string, title: string, url: string): LinkItem
   const db = readDB();
   const currentLinks = db.links.filter((l) => l.profileId === profileId);
 
+  const nowIso = new Date().toISOString();
   const newLink: LinkItem = {
     id: `link-${Date.now()}`,
     profileId,
@@ -281,7 +282,8 @@ export function addLink(profileId: string, title: string, url: string): LinkItem
     orderIndex: currentLinks.length,
     isActive: true,
     clickCount: 0,
-    createdAt: new Date().toISOString(),
+    createdAt: nowIso,
+    updatedAt: nowIso,
   };
 
   db.links.push(newLink);
@@ -297,6 +299,7 @@ export function updateLink(id: string, updates: Partial<LinkItem>): LinkItem | n
   db.links[index] = {
     ...db.links[index],
     ...updates,
+    updatedAt: updates.updatedAt || new Date().toISOString(),
   };
 
   writeDB(db);

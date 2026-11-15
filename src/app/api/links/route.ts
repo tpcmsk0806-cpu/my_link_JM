@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLinksByProfileId, addLink, updateLink, deleteLink, reorderLinks } from "@/lib/db";
+import { addLinkToFirestore, updateLinkInFirestore, deleteLinkFromFirestore } from "@/lib/firestoreLinks";
 
 export async function GET(req: NextRequest) {
   try {
@@ -31,6 +32,20 @@ export async function POST(req: NextRequest) {
     }
 
     const newLink = addLink(targetProfileId, title, formattedUrl);
+
+    // Firebase Firestore (users/anonymous/links) 경로에 저장
+    try {
+      await addLinkToFirestore(title, formattedUrl, {
+        id: newLink.id,
+        profileId: targetProfileId,
+        orderIndex: newLink.orderIndex,
+        isActive: newLink.isActive,
+        clickCount: newLink.clickCount,
+      });
+    } catch (fbError) {
+      console.warn("Firestore save warning in API route:", fbError);
+    }
+
     return NextResponse.json({ success: true, link: newLink });
   } catch (error) {
     console.error("Links POST error:", error);
@@ -54,9 +69,17 @@ export async function PUT(req: NextRequest) {
       }
     }
 
+    updates.updatedAt = updates.updatedAt || new Date().toISOString();
+
     const updated = updateLink(id, updates);
     if (!updated) {
       return NextResponse.json({ error: "Link not found" }, { status: 404 });
+    }
+
+    try {
+      await updateLinkInFirestore(id, updates);
+    } catch (fbErr) {
+      console.warn("Firestore update warning in API route:", fbErr);
     }
 
     return NextResponse.json({ success: true, link: updated });
@@ -78,6 +101,12 @@ export async function DELETE(req: NextRequest) {
     const deleted = deleteLink(id);
     if (!deleted) {
       return NextResponse.json({ error: "Link not found" }, { status: 404 });
+    }
+
+    try {
+      await deleteLinkFromFirestore(id);
+    } catch (fbErr) {
+      console.warn("Firestore delete warning in API route:", fbErr);
     }
 
     return NextResponse.json({ success: true });

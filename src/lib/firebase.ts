@@ -1,5 +1,7 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAnalytics, isSupported, Analytics } from "firebase/analytics";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getAuth, Auth, GoogleAuthProvider } from "firebase/auth";
 
 // Your web app's Firebase configuration (환경 변수로 관리)
 const firebaseConfig = {
@@ -15,6 +17,13 @@ const firebaseConfig = {
 // Initialize Firebase (Next.js SSR / HMR 중복 초기화 방지)
 const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
+// Initialize Firestore
+const db: Firestore = getFirestore(app);
+
+// Initialize Auth
+const auth: Auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+
 // Initialize Analytics (브라우저 환경 및 지원 여부 확인 후 초기화)
 let analytics: Analytics | null = null;
 if (typeof window !== "undefined") {
@@ -25,13 +34,5 @@ if (typeof window !== "undefined") {
   });
 }
 
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-// 예시:
-// import { getAuth } from "firebase/auth";
-// import { getFirestore } from "firebase/firestore";
-// export const auth = getAuth(app);
-// export const db = getFirestore(app);
-
-export { app, analytics, firebaseConfig };
+export { app, db, auth, googleProvider, analytics, firebaseConfig };
 export default app;

@@ -36,6 +36,7 @@ export interface LinkItem {
   isActive: boolean;
   clickCount: number;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface User {

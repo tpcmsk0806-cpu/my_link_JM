@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useProfileStore } from "@/lib/store";
 import { THEMES } from "@/lib/themes";
+import { updateLinkInFirestore, deleteLinkFromFirestore } from "@/lib/firestoreLinks";
 import { ButtonShape, ButtonStyle } from "@/types";
 import {
   Plus,
@@ -19,8 +20,12 @@ import {
   Link2,
   X,
   ExternalLink,
+  RefreshCw,
+  Clock,
 } from "lucide-react";
 import AddLinkDialog from "./AddLinkDialog";
+import DeleteConfirmModal from "@/components/DeleteConfirmModal";
+import { validateTitle, validateUrl } from "@/lib/validation";
 
 interface QuickEditorProps {
   onClose: () => void;
@@ -37,20 +42,92 @@ export default function QuickEditor({ onClose, onOpenAddDialog }: QuickEditorPro
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editUrl, setEditUrl] = useState("");
+  const [editTouched, setEditTouched] = useState(false);
 
+  // Delete modal state
+  const [deletingLink, setDeletingLink] = useState<{ id: string; title: string; url?: string } | null>(null);
+
+  // Loading states for updates/refreshes
+  const [isSavingLink, setIsSavingLink] = useState<string | null>(null);
+  const [isDeletingLinkId, setIsDeletingLinkId] = useState<string | null>(null);
+  const [isTogglingLinkId, setIsTogglingLinkId] = useState<string | null>(null);
+
+  const isUpdatingAny = Boolean(isSavingLink || isDeletingLinkId || isTogglingLinkId);
+
+  const editTitleVal = validateTitle(editTitle);
+  const editUrlVal = validateUrl(editUrl);
+  const isEditValid = editTitleVal.isValid && editUrlVal.isValid;
 
   const startEditLink = (linkId: string, title: string, url: string) => {
     setEditingLinkId(linkId);
     setEditTitle(title);
     setEditUrl(url);
+    setEditTouched(false);
   };
 
-  const handleSaveEdit = (linkId: string) => {
-    store.updateLink(linkId, {
-      title: editTitle.trim(),
-      url: editUrl.trim(),
-    });
-    setEditingLinkId(null);
+  const handleSaveEdit = async (linkId: string) => {
+    setEditTouched(true);
+    if (!isEditValid) return;
+
+    try {
+      setIsSavingLink(linkId);
+      const cleanTitle = editTitle.trim();
+      const cleanUrl = editUrlVal.formattedUrl;
+      const targetUpdatedAt = new Date().toISOString();
+
+      // Firebase Firestore 업데이트
+      try {
+        await updateLinkInFirestore(linkId, {
+          title: cleanTitle,
+          url: cleanUrl,
+          updatedAt: targetUpdatedAt,
+        });
+      } catch (fbErr) {
+        console.warn("Firestore update warning:", fbErr);
+      }
+
+      // 로컬 스토어 업데이트
+      store.updateLink(linkId, {
+        title: cleanTitle,
+        url: cleanUrl,
+        updatedAt: targetUpdatedAt,
+      });
+      setEditingLinkId(null);
+    } finally {
+      setIsSavingLink(null);
+    }
+  };
+
+  const handleToggleActive = async (linkId: string, currentActive: boolean) => {
+    try {
+      setIsTogglingLinkId(linkId);
+      try {
+        await updateLinkInFirestore(linkId, { isActive: !currentActive });
+      } catch (fbErr) {
+        console.warn("Firestore toggle warning:", fbErr);
+      }
+      store.toggleLinkActive(linkId);
+    } finally {
+      setIsTogglingLinkId(null);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingLink) return;
+    const linkId = deletingLink.id;
+
+    try {
+      setIsDeletingLinkId(linkId);
+      try {
+        await deleteLinkFromFirestore(linkId);
+      } catch (fbErr) {
+        console.warn("Firestore delete warning:", fbErr);
+      }
+      store.deleteLink(linkId);
+      setDeletingLink(null);
+    } finally {
+      setIsDeletingLinkId(null);
+    }
   };
 
   const handleReset = () => {
@@ -69,9 +146,16 @@ export default function QuickEditor({ onClose, onOpenAddDialog }: QuickEditorPro
           <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
             실시간 편집 패널
           </h2>
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 font-semibold">
-            localStorage 저장
-          </span>
+          {isUpdatingAny ? (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 font-semibold flex items-center gap-1 animate-pulse">
+              <RefreshCw className="w-3 h-3 animate-spin" />
+              <span>업데이트 중...</span>
+            </span>
+          ) : (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-semibold flex items-center gap-1">
+              🔥 Firebase 연동
+            </span>
+          )}
         </div>
 
         <button
@@ -167,35 +251,90 @@ export default function QuickEditor({ onClose, onOpenAddDialog }: QuickEditorPro
                     >
                       {isEditingThis ? (
                         /* Edit Mode Form */
-                        <div className="space-y-2">
-                          <input
-                            type="text"
-                            value={editTitle}
-                            onChange={(e) => setEditTitle(e.target.value)}
-                            placeholder="제목"
-                            className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                          />
-                          <input
-                            type="text"
-                            value={editUrl}
-                            onChange={(e) => setEditUrl(e.target.value)}
-                            placeholder="URL"
-                            className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                          />
+                        <div className="space-y-2 p-2 bg-slate-50 dark:bg-zinc-800/60 rounded-xl border border-cyan-500/30">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-bold text-slate-700 dark:text-zinc-300">
+                                제목 *
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-400">
+                                {editTitle.length}/40자
+                              </span>
+                            </div>
+                            <input
+                              type="text"
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                              placeholder="링크 제목"
+                              maxLength={45}
+                              className={`w-full px-2.5 py-1.5 text-xs rounded-lg border bg-white dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 ${
+                                editTouched && !editTitleVal.isValid
+                                  ? "border-rose-500 focus:ring-rose-500"
+                                  : "border-slate-200 dark:border-zinc-700 focus:ring-cyan-500"
+                              }`}
+                            />
+                            {editTouched && !editTitleVal.isValid && (
+                              <p className="text-[10px] text-rose-500 mt-0.5">
+                                {editTitleVal.error}
+                              </p>
+                            )}
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-bold text-slate-700 dark:text-zinc-300">
+                                URL 주소 *
+                              </span>
+                              {editUrlVal.isValid && editUrlVal.isCorrected && (
+                                <span className="text-[10px] text-emerald-500 font-semibold">
+                                  https:// 자동 적용됨
+                                </span>
+                              )}
+                            </div>
+                            <input
+                              type="text"
+                              value={editUrl}
+                              onChange={(e) => setEditUrl(e.target.value)}
+                              placeholder="example.com 또는 https://..."
+                              className={`w-full px-2.5 py-1.5 text-xs font-mono rounded-lg border bg-white dark:bg-zinc-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 ${
+                                editTouched && !editUrlVal.isValid
+                                  ? "border-rose-500 focus:ring-rose-500"
+                                  : "border-slate-200 dark:border-zinc-700 focus:ring-cyan-500"
+                              }`}
+                            />
+                            {editTouched && !editUrlVal.isValid && (
+                              <p className="text-[10px] text-rose-500 mt-0.5">
+                                {editUrlVal.error}
+                              </p>
+                            )}
+                          </div>
+
                           <div className="flex justify-end gap-1.5 pt-1">
                             <button
                               type="button"
+                              disabled={isSavingLink === link.id}
                               onClick={() => setEditingLinkId(null)}
-                              className="px-2.5 py-1 text-[11px] rounded bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300"
+                              className="px-2.5 py-1 text-[11px] rounded bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 disabled:opacity-50"
                             >
                               취소
                             </button>
                             <button
                               type="button"
+                              disabled={isSavingLink === link.id || (editTouched && !isEditValid)}
                               onClick={() => handleSaveEdit(link.id)}
-                              className="px-3 py-1 text-[11px] font-semibold rounded bg-cyan-600 text-white flex items-center gap-1"
+                              className="px-3 py-1 text-[11px] font-semibold rounded bg-cyan-600 hover:bg-cyan-500 text-white flex items-center gap-1 transition-all disabled:opacity-60"
                             >
-                              <Check className="w-3 h-3" /> 저장
+                              {isSavingLink === link.id ? (
+                                <>
+                                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  <span>저장 중...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="w-3 h-3" />
+                                  <span>저장</span>
+                                </>
+                              )}
                             </button>
                           </div>
                         </div>
@@ -224,13 +363,18 @@ export default function QuickEditor({ onClose, onOpenAddDialog }: QuickEditorPro
 
                           {/* Link Title & URL */}
                           <div className="flex-1 min-w-0 px-2">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                                 {link.title}
                               </span>
                               {!link.isActive && (
                                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 font-medium">
                                   숨김
+                                </span>
+                              )}
+                              {link.updatedAt && (
+                                <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
+                                  · 수정됨
                                 </span>
                               )}
                             </div>
@@ -244,7 +388,8 @@ export default function QuickEditor({ onClose, onOpenAddDialog }: QuickEditorPro
                           <div className="flex items-center gap-1">
                             {/* Toggle Show/Hide */}
                             <button
-                              onClick={() => store.toggleLinkActive(link.id)}
+                              onClick={() => handleToggleActive(link.id, link.isActive)}
+                              disabled={isTogglingLinkId === link.id}
                               className={`p-1.5 rounded-lg transition-colors ${
                                 link.isActive
                                   ? "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
@@ -252,7 +397,9 @@ export default function QuickEditor({ onClose, onOpenAddDialog }: QuickEditorPro
                               }`}
                               title={link.isActive ? "노출 끄기 (숨기기)" : "노출 켜기 (보이기)"}
                             >
-                              {link.isActive ? (
+                              {isTogglingLinkId === link.id ? (
+                                <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                              ) : link.isActive ? (
                                 <Eye className="w-4 h-4" />
                               ) : (
                                 <EyeOff className="w-4 h-4" />
@@ -270,15 +417,16 @@ export default function QuickEditor({ onClose, onOpenAddDialog }: QuickEditorPro
 
                             {/* Delete Button */}
                             <button
-                              onClick={() => {
-                                if (confirm(`'${link.title}' 링크를 삭제하시겠습니까?`)) {
-                                  store.deleteLink(link.id);
-                                }
-                              }}
-                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                              onClick={() => setDeletingLink({ id: link.id, title: link.title, url: link.url })}
+                              disabled={isDeletingLinkId === link.id}
+                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 disabled:opacity-50"
                               title="삭제하기"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              {isDeletingLinkId === link.id ? (
+                                <div className="w-3.5 h-3.5 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
                             </button>
                           </div>
                         </div>
@@ -537,6 +685,18 @@ export default function QuickEditor({ onClose, onOpenAddDialog }: QuickEditorPro
           완료 및 닫기
         </button>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(deletingLink)}
+        linkTitle={deletingLink?.title || ""}
+        linkUrl={deletingLink?.url || ""}
+        isDeleting={Boolean(isDeletingLinkId)}
+        onClose={() => {
+          if (!isDeletingLinkId) setDeletingLink(null);
+        }}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

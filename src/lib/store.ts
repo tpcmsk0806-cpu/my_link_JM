@@ -20,6 +20,8 @@ export interface ProfileState {
   updateButtonShape: (shape: ButtonShape) => void;
   updateButtonStyle: (style: ButtonStyle) => void;
   addLink: (title: string, url: string) => void;
+  addLinkItem: (link: LinkItem) => void;
+  setLinks: (links: LinkItem[]) => void;
   updateLink: (id: string, updates: Partial<LinkItem>) => void;
   deleteLink: (id: string) => void;
   toggleLinkActive: (id: string) => void;
@@ -152,6 +154,7 @@ export const useProfileStore = create<ProfileState>()(
             formattedUrl = `https://${formattedUrl}`;
           }
 
+          const nowIso = new Date().toISOString();
           const newLink: LinkItem = {
             id: `link-${Date.now()}`,
             profileId: "profile-1",
@@ -160,7 +163,8 @@ export const useProfileStore = create<ProfileState>()(
             orderIndex: state.links.length,
             isActive: true,
             clickCount: 0,
-            createdAt: new Date().toISOString(),
+            createdAt: nowIso,
+            updatedAt: nowIso,
           };
 
           return {
@@ -168,9 +172,30 @@ export const useProfileStore = create<ProfileState>()(
           };
         }),
 
+      addLinkItem: (link: LinkItem) =>
+        set((state) => {
+          const exists = state.links.some((l) => l.id === link.id);
+          if (exists) {
+            return {
+              links: state.links.map((l) => (l.id === link.id ? link : l)),
+            };
+          }
+          return {
+            links: [...state.links, link],
+          };
+        }),
+
+      setLinks: (links: LinkItem[]) =>
+        set(() => ({
+          links,
+        })),
+
       updateLink: (id, updates) =>
         set((state) => {
-          let formattedUpdates = { ...updates };
+          let formattedUpdates: any = {
+            ...updates,
+            updatedAt: updates.updatedAt || new Date().toISOString(),
+          };
           if (formattedUpdates.url) {
             let u = formattedUpdates.url.trim();
             if (u && !/^https?:\/\//i.test(u) && !u.startsWith("mailto:")) {

@@ -3,6 +3,8 @@
 import React, { useState, useId } from "react";
 import { useProfileStore } from "@/lib/store";
 import { getTheme } from "@/lib/themes";
+import { addLinkToFirestore } from "@/lib/firestoreLinks";
+import { auth } from "@/lib/firebase";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import LinkCard from "./LinkCard";
 import { LinkItem } from "@/types";
+import { validateTitle, validateUrl } from "@/lib/validation";
 import {
   Link2,
   Plus,
@@ -34,78 +37,6 @@ const EMOJI_PRESETS = [
   "🛍️", "📺", "💻", "📝", "☕", "🎨", "⭐", "🚀", "🔗", "📸", "💬", "💼"
 ];
 
-// Validation Helper Functions
-function validateTitle(rawTitle: string): { isValid: boolean; error?: string } {
-  const trimmed = rawTitle.trim();
-  if (!trimmed) {
-    return { isValid: false, error: "버튼 제목을 입력해주세요." };
-  }
-  if (trimmed.length < 2) {
-    return { isValid: false, error: "제목은 최소 2자 이상 입력해주세요." };
-  }
-  if (trimmed.length > 40) {
-    return { isValid: false, error: "제목은 최대 40자까지 입력 가능합니다." };
-  }
-  return { isValid: true };
-}
-
-function validateUrl(rawUrl: string): {
-  isValid: boolean;
-  formattedUrl: string;
-  error?: string;
-  isCorrected?: boolean;
-} {
-  const trimmed = rawUrl.trim();
-  if (!trimmed) {
-    return { isValid: false, formattedUrl: "", error: "연결할 URL 주소를 입력해주세요." };
-  }
-
-  if (/\s/.test(trimmed)) {
-    return { isValid: false, formattedUrl: "", error: "URL에는 공백이 포함될 수 없습니다." };
-  }
-
-  // mailto check
-  if (trimmed.startsWith("mailto:")) {
-    const email = trimmed.replace("mailto:", "");
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return {
-        isValid: false,
-        formattedUrl: "",
-        error: "올바른 이메일 주소(예: mailto:name@domain.com)를 입력해주세요.",
-      };
-    }
-    return { isValid: true, formattedUrl: trimmed, isCorrected: false };
-  }
-
-  // Auto-prepend https:// if missing
-  let withProto = trimmed;
-  let isCorrected = false;
-  if (!/^https?:\/\//i.test(trimmed)) {
-    withProto = `https://${trimmed}`;
-    isCorrected = true;
-  }
-
-  try {
-    const parsed = new URL(withProto);
-    const hostname = parsed.hostname;
-    // Hostname must contain at least one dot or be localhost
-    const domainRegex = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
-
-    if (!domainRegex.test(hostname) && hostname !== "localhost") {
-      return {
-        isValid: false,
-        formattedUrl: "",
-        error: "올바른 웹 도메인 주소(예: example.com)를 입력해주세요.",
-      };
-    }
-
-    return { isValid: true, formattedUrl: withProto, isCorrected };
-  } catch {
-    return { isValid: false, formattedUrl: "", error: "올바른 웹 주소 형식이 아닙니다." };
-  }
-}
-
 export default function AddLinkDialog({
   open,
   onOpenChange,
@@ -121,6 +52,8 @@ export default function AddLinkDialog({
   const [touchedTitle, setTouchedTitle] = useState(false);
   const [touchedUrl, setTouchedUrl] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Validation results
   const titleValidation = validateTitle(title);
@@ -147,23 +80,46 @@ export default function AddLinkDialog({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitAttempted(true);
 
-    if (!isFormValid) {
+    if (!isFormValid || isSubmitting) {
       return;
     }
 
-    // Add link to Zustand local store (persisted to localStorage)
-    store.addLink(title.trim(), urlValidation.formattedUrl);
+    try {
+      setIsSubmitting(true);
+      setSubmitError(null);
+      const activeUid = auth.currentUser?.uid || "anonymous";
 
-    // Reset form states
-    resetForm();
-    onOpenChange(false);
+      // 1. Firebase Firestore에 저장 (경로: users/{activeUid}/links)
+      const newLink = await addLinkToFirestore(
+        title.trim(),
+        urlValidation.formattedUrl,
+        {
+          orderIndex: store.links.length,
+          userId: activeUid,
+        }
+      );
 
-    if (onSuccess) {
-      onSuccess(title.trim());
+      // 2. Zustand 로컬 스토어에 추가 (UI 즉시 반영)
+      store.addLinkItem(newLink);
+
+      // Reset form states
+      resetForm();
+      onOpenChange(false);
+
+      if (onSuccess) {
+        onSuccess(title.trim());
+      }
+    } catch (err: any) {
+      console.error("Firebase 링크 저장 오류:", err);
+      setSubmitError(
+        err?.message || "Firebase 저장 중 오류가 발생했습니다."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -173,6 +129,8 @@ export default function AddLinkDialog({
     setTouchedTitle(false);
     setTouchedUrl(false);
     setSubmitAttempted(false);
+    setIsSubmitting(false);
+    setSubmitError(null);
   };
 
   const handleClose = () => {
@@ -180,10 +138,12 @@ export default function AddLinkDialog({
     onOpenChange(false);
   };
 
+  const activeUid = auth.currentUser?.uid || "anonymous";
+
   // Live preview link card object
   const previewLink: LinkItem = {
     id: "preview-link",
-    profileId: "profile-1",
+    profileId: activeUid,
     title: title.trim() || "버튼 제목 미리보기",
     url: urlValidation.isValid ? urlValidation.formattedUrl : "https://example.com",
     orderIndex: 0,
@@ -196,8 +156,13 @@ export default function AddLinkDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent onClose={handleClose} className="sm:max-w-md">
         <DialogHeader>
-          <div className="w-10 h-10 rounded-2xl bg-[#0070d1]/10 text-[#0070d1] flex items-center justify-center mb-2 shadow-sm">
-            <Plus className="w-5 h-5 stroke-[2.5]" />
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 rounded-2xl bg-[#0070d1]/10 text-[#0070d1] flex items-center justify-center mb-2 shadow-sm">
+              <Plus className="w-5 h-5 stroke-[2.5]" />
+            </div>
+            <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-medium">
+              🔥 Firestore: users/{activeUid}/links
+            </span>
           </div>
           <DialogTitle>새 링크 추가하기</DialogTitle>
           <DialogDescription>
@@ -377,25 +342,43 @@ export default function AddLinkDialog({
             </div>
           </div>
 
+          {/* Submit error alert */}
+          {submitError && (
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 flex items-start gap-2 text-xs text-rose-700 dark:text-rose-300">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-500" />
+              <span>{submitError}</span>
+            </div>
+          )}
+
           <DialogFooter>
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2.5 text-xs font-semibold rounded-xl text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+              disabled={isSubmitting}
+              className="px-4 py-2.5 text-xs font-semibold rounded-xl text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
             >
               취소
             </button>
             <button
               type="submit"
-              disabled={!isFormValid}
+              disabled={!isFormValid || isSubmitting}
               className={`px-5 py-2.5 text-xs font-bold rounded-xl text-white transition-all flex items-center justify-center gap-1.5 ${
-                isFormValid
+                isFormValid && !isSubmitting
                   ? "bg-[#0070d1] hover:bg-[#0064b7] active:bg-[#004d8d] shadow-md shadow-[#0070d1]/30 active:scale-95 cursor-pointer"
                   : "bg-slate-300 dark:bg-zinc-700 text-slate-400 dark:text-zinc-500 opacity-60 cursor-not-allowed"
               }`}
             >
-              <Check className="w-3.5 h-3.5" />
-              <span>링크 추가하기</span>
+              {isSubmitting ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Firebase 저장 중...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-3.5 h-3.5" />
+                  <span>링크 추가하기</span>
+                </>
+              )}
             </button>
           </DialogFooter>
         </form>
