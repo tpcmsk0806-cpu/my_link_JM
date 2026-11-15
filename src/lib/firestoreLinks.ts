@@ -6,6 +6,7 @@ import {
   getDoc,
   updateDoc,
   deleteDoc,
+  increment,
   query,
   orderBy,
   serverTimestamp,
@@ -159,4 +160,22 @@ export async function deleteLinkFromFirestore(id: string, userId?: string): Prom
   const uid = resolveUid(userId);
   const docRef = doc(db, "users", uid, "links", id);
   await deleteDoc(docRef);
+}
+
+/**
+ * Increment clickCount for a specific link in Firestore `users/{uid}/links/{linkId}`
+ */
+export async function recordLinkClickInFirestore(
+  linkId: string,
+  userId?: string
+): Promise<void> {
+  const uid = resolveUid(userId);
+  const docRef = doc(db, "users", uid, "links", linkId);
+  try {
+    await updateDoc(docRef, {
+      clickCount: increment(1),
+    });
+  } catch (err: any) {
+    console.warn("Click count update warning:", err?.message || err);
+  }
 }

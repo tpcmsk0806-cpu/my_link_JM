@@ -3,19 +3,29 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ====== 사용자 프로필 (users/{userId}) ======
+    // ====== 1. 사용자 기본 프로필 (users/{userId}) ======
     match /users/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // ====== 사용자 서브컬렉션 (profile/info, links 등 모든 하위 문서) ======
+    // ====== 2. 사용자 링크 목록 (users/{userId}/links/{linkId}) ======
+    // - 링크 소유자: 생성, 수정, 삭제 전체 권한 보유
+    // - 방문자(비로그인 포함): 오직 clickCount 필드만 단독 수정 허용
+    match /users/{userId}/links/{linkId} {
+      allow read: if true;
+      allow create, delete: if request.auth != null && request.auth.uid == userId;
+      allow update: if (request.auth != null && request.auth.uid == userId) ||
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clickCount']);
+    }
+
+    // ====== 3. 사용자 하위 서브컬렉션 (profile/info 등) ======
     match /users/{userId}/{document=**} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // ====== 사용자 이름 중복 확인 및 예약 (usernames/{username}) ======
+    // ====== 4. 사용자 이름 중복 확인 및 매핑 (usernames/{username}) ======
     match /usernames/{username} {
       allow read: if true;
       allow write: if request.auth != null;

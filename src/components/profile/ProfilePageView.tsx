@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useProfileStore } from "@/lib/store";
 import { useIsHydrated } from "@/lib/useIsHydrated";
 import { getTheme } from "@/lib/themes";
+import { recordLinkClickInFirestore } from "@/lib/firestoreLinks";
 import { auth, googleProvider } from "@/lib/firebase";
 import { onAuthStateChanged, signInWithPopup, signOut, User } from "firebase/auth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -30,6 +31,7 @@ import {
   Copy,
   Settings,
   ExternalLink,
+  BarChart3,
 } from "lucide-react";
 
 export default function ProfilePageView() {
@@ -179,6 +181,7 @@ export default function ProfilePageView() {
 
   const handleLinkClick = (linkId: string, url: string) => {
     store.recordClick(linkId);
+    recordLinkClickInFirestore(linkId, currentUser?.uid);
   };
 
   const handleAddSuccess = (newTitle: string) => {
@@ -282,19 +285,6 @@ export default function ProfilePageView() {
             )}
           </button>
 
-          {/* 내 개인별 공개 페이지 바로가기 버튼 */}
-          {currentUser && (
-            <Link
-              href={`/${encodeURIComponent(store.displayName || store.username || "user")}`}
-              target="_blank"
-              className="px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 backdrop-blur-md text-current transition-all shadow-sm active:scale-95 cursor-pointer"
-              title="내 개인별 공개 페이지 열기 (새 탭)"
-            >
-              <span>내 페이지</span>
-              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-            </Link>
-          )}
-
           {/* Google Auth Status: [로그인] or [사용자 프로필 드롭다운] */}
           {isAuthLoading ? (
             <div className="w-24 h-8 rounded-full bg-black/5 dark:bg-white/5 animate-pulse" />
@@ -385,24 +375,23 @@ export default function ProfilePageView() {
                       </div>
                     </button>
 
-                    {/* 내 공개 페이지 바로가기 (새 탭 이동) */}
+                    {/* 링크 통계 대시보드 (/stats) */}
                     <Link
-                      href={`/${encodeURIComponent(store.displayName || store.username || "user")}`}
-                      target="_blank"
+                      href="/stats"
                       onClick={() => setIsProfileMenuOpen(false)}
                       className="w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between hover:bg-slate-100 dark:hover:bg-zinc-800 text-left transition-colors cursor-pointer text-slate-800 dark:text-zinc-100"
                     >
                       <div className="flex items-center gap-2.5">
-                        <ExternalLink className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        <BarChart3 className="w-4 h-4 text-purple-500 flex-shrink-0" />
                         <div className="flex flex-col">
-                          <span>내 페이지 바로가기</span>
-                          <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
-                            /{store.displayName || store.username}
+                          <span>링크 클릭 통계</span>
+                          <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-normal">
+                            총 클릭수 및 차트 대시보드
                           </span>
                         </div>
                       </div>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
-                        방문자 뷰
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold">
+                        통계
                       </span>
                     </Link>
 
@@ -417,21 +406,6 @@ export default function ProfilePageView() {
                     >
                       <Copy className="w-4 h-4 text-indigo-500 flex-shrink-0" />
                       <span>내 링크 복사</span>
-                    </button>
-
-                    {/* 내 페이지 미리보기 */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsEditMode(false);
-                        setIsProfileMenuOpen(false);
-                        setAddedToastMessage("방문자 시점의 미리보기 모드로 전환되었습니다! 📱");
-                        setTimeout(() => setAddedToastMessage(null), 2500);
-                      }}
-                      className="w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-zinc-800 text-left transition-colors cursor-pointer"
-                    >
-                      <Eye className="w-4 h-4 text-cyan-500 flex-shrink-0" />
-                      <span>내 페이지 미리보기</span>
                     </button>
                   </div>
 
@@ -546,7 +520,7 @@ export default function ProfilePageView() {
                 buttonShape={store.buttonShape}
                 buttonStyle={store.buttonStyle}
                 onLinkClick={handleLinkClick}
-                showClickCount={isEditMode}
+                showClickCount={true}
               />
             ))
           )}

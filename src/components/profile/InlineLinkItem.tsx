@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Link2,
   ExternalLink,
+  MousePointerClick,
 } from "lucide-react";
 
 // Google Favicon 서비스 기반 파비콘 URL 추출
@@ -433,8 +434,8 @@ export default function InlineLinkItem({
           color: buttonStyle === "solid" ? theme.cardText : undefined,
         }}
       >
-        {/* Left balance spacer, favicon or click counter */}
-        <div className="w-10 sm:w-12 flex items-center justify-start flex-shrink-0 pl-1">
+        {/* Left balance spacer & favicon */}
+        <div className="w-8 sm:w-9 flex items-center justify-start flex-shrink-0 pl-1">
           {faviconUrl ? (
             <img
               key={faviconUrl}
@@ -445,12 +446,8 @@ export default function InlineLinkItem({
                 (e.currentTarget as HTMLImageElement).style.display = "none";
               }}
             />
-          ) : showClickCount && link.clickCount > 0 ? (
-            <span className="text-[10px] opacity-60 font-normal px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 backdrop-blur-sm">
-              {link.clickCount}회
-            </span>
           ) : (
-            <div className="w-4" />
+            <div className="w-5" />
           )}
         </div>
 
@@ -471,8 +468,19 @@ export default function InlineLinkItem({
           </div>
         </a>
 
-        {/* Right Embedded Actions: [Edit] & [Delete] inside the Card */}
-        <div className="flex items-center gap-1 flex-shrink-0 z-10 pl-1">
+        {/* Right Embedded Actions: [Click Count] + [Edit] & [Delete] inside the Card */}
+        <div className="flex items-center gap-1.5 flex-shrink-0 z-10 pl-1">
+          {/* Click Count Pill */}
+          {showClickCount && (
+            <span
+              title={`누적 클릭 수: ${link.clickCount ?? 0}회`}
+              className="text-[10px] sm:text-[11px] font-semibold opacity-75 px-2 py-0.5 rounded-full bg-black/5 dark:bg-white/10 flex items-center gap-1 select-none hover:opacity-100 transition-opacity"
+            >
+              <MousePointerClick className="w-3 h-3 opacity-70" />
+              <span>{link.clickCount ?? 0}회</span>
+            </span>
+          )}
+
           {/* Edit Button */}
           <button
             type="button"

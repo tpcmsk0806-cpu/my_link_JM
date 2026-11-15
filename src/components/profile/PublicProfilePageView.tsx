@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { UserProfileData, LinkItem } from "@/types";
+import { recordLinkClickInFirestore } from "@/lib/firestoreLinks";
 import {
   Link2,
   ExternalLink,
@@ -10,6 +11,7 @@ import {
   Check,
   User as UserIcon,
   Sparkles,
+  MousePointerClick,
 } from "lucide-react";
 
 // Google Favicon 서비스 기반 파비콘 URL 추출
@@ -55,6 +57,19 @@ export default function PublicProfilePageView({
   };
 
   const activeLinks = links.filter((l) => l.isActive);
+
+  // 로컬 클릭 수 즉시 반영 상태
+  const [localClickCounts, setLocalClickCounts] = useState<Record<string, number>>({});
+
+  const handleLinkClick = (linkId: string) => {
+    // 1. 화면 즉시 +1 반영
+    setLocalClickCounts((prev) => ({
+      ...prev,
+      [linkId]: (prev[linkId] ?? links.find((l) => l.id === linkId)?.clickCount ?? 0) + 1,
+    }));
+    // 2. Firestore 누적 저장
+    recordLinkClickInFirestore(linkId, profile.userId);
+  };
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-between bg-gradient-to-b from-slate-950 via-zinc-900 to-black text-white px-4 py-6 transition-colors">
@@ -147,12 +162,14 @@ export default function PublicProfilePageView({
           ) : (
             activeLinks.map((link) => {
               const faviconUrl = getFaviconUrl(link.url);
+              const currentClicks = localClickCounts[link.id] ?? link.clickCount ?? 0;
               return (
                 <a
                   key={link.id}
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => handleLinkClick(link.id)}
                   className="w-full py-4 px-5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800/90 border border-zinc-800/80 hover:border-cyan-500/50 text-white font-semibold text-sm sm:text-base flex items-center justify-between shadow-lg shadow-black/20 hover:shadow-cyan-500/10 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.985] transition-all cursor-pointer"
                 >
                   <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
@@ -171,7 +188,14 @@ export default function PublicProfilePageView({
                   <span className="flex-1 text-center truncate px-2 font-bold">
                     {link.title}
                   </span>
-                  <div className="w-6 flex items-center justify-end flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span
+                      title={`누적 클릭 수: ${currentClicks}회`}
+                      className="text-[10px] sm:text-[11px] font-semibold text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full flex items-center gap-1"
+                    >
+                      <MousePointerClick className="w-3 h-3 text-cyan-400" />
+                      <span>{currentClicks}회</span>
+                    </span>
                     <ExternalLink className="w-4 h-4 text-zinc-500 group-hover:text-cyan-400" />
                   </div>
                 </a>
