@@ -146,14 +146,10 @@ export default function QuickEditor({ onClose, onOpenAddDialog }: QuickEditorPro
           <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
             실시간 편집 패널
           </h2>
-          {isUpdatingAny ? (
+          {isUpdatingAny && (
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 font-semibold flex items-center gap-1 animate-pulse">
               <RefreshCw className="w-3 h-3 animate-spin" />
               <span>업데이트 중...</span>
-            </span>
-          ) : (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-semibold flex items-center gap-1">
-              🔥 Firebase 연동
             </span>
           )}
         </div>
@@ -370,11 +366,6 @@ export default function QuickEditor({ onClose, onOpenAddDialog }: QuickEditorPro
                               {!link.isActive && (
                                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 font-medium">
                                   숨김
-                                </span>
-                              )}
-                              {link.updatedAt && (
-                                <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
-                                  · 수정됨
                                 </span>
                               )}
                             </div>

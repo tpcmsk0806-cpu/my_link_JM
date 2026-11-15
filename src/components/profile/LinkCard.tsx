@@ -66,6 +66,25 @@ export default function LinkCard({
 
   const isNeoBrutalist = theme.id === "neo-brutalism";
 
+  // Google Favicon 서비스 기반 파비콘 URL 추출
+  const getFaviconUrl = (urlStr: string) => {
+    try {
+      const trimmed = urlStr?.trim();
+      if (!trimmed) return null;
+      const candidate =
+        trimmed.startsWith("http://") || trimmed.startsWith("https://")
+          ? trimmed
+          : `https://${trimmed}`;
+      const parsed = new URL(candidate);
+      if (!parsed.hostname || !parsed.hostname.includes(".")) return null;
+      return `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=64`;
+    } catch {
+      return null;
+    }
+  };
+
+  const faviconUrl = getFaviconUrl(link.url);
+
   return (
     <a
       href={link.url}
@@ -81,13 +100,23 @@ export default function LinkCard({
         color: buttonStyle === "solid" ? theme.cardText : undefined,
       }}
     >
-      {/* Left spacer or click indicator for perfect center balance */}
-      <div className="w-6 flex items-center">
-        {showClickCount && link.clickCount > 0 && (
+      {/* Left favicon or click indicator for perfect center balance */}
+      <div className="w-6 h-6 flex items-center justify-center shrink-0">
+        {faviconUrl ? (
+          <img
+            key={faviconUrl}
+            src={faviconUrl}
+            alt=""
+            className="w-5 h-5 rounded-md object-contain shadow-xs"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
+          />
+        ) : showClickCount && link.clickCount > 0 ? (
           <span className="text-[10px] opacity-50 font-normal">
             {link.clickCount}회
           </span>
-        )}
+        ) : null}
       </div>
 
       {/* Main Title */}

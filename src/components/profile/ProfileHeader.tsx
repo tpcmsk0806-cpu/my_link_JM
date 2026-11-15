@@ -66,11 +66,19 @@ export default function ProfileHeader({
 
       {/* Display Name & Handle */}
       <h1
-        className="text-xl sm:text-2xl font-bold tracking-tight mb-1.5 px-2"
+        className="text-xl sm:text-2xl font-bold tracking-tight mb-0.5 px-2"
         style={{ color: theme.textColor }}
       >
         {displayName || `@${username || "user"}`}
       </h1>
+      {username && (
+        <span
+          className="text-xs font-mono opacity-60 mb-2 block"
+          style={{ color: theme.textColor }}
+        >
+          @{username}
+        </span>
+      )}
 
       {/* Bio */}
       {bio && (

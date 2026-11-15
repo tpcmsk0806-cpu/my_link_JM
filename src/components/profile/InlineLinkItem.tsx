@@ -17,31 +17,24 @@ import {
   CheckCircle2,
   Link2,
   ExternalLink,
-  Clock,
 } from "lucide-react";
 
-function formatKoreanTime(dateStr?: string): string {
-  if (!dateStr) return "";
+// Google Favicon 서비스 기반 파비콘 URL 추출
+const getFaviconUrl = (urlStr: string) => {
   try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return "";
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 1) return "방금 전 수정됨";
-    if (diffMins < 60) return `${diffMins}분 전 수정됨`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}시간 전 수정됨`;
-    return new Intl.DateTimeFormat("ko-KR", {
-      month: "numeric",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(d) + " 수정됨";
+    const trimmed = urlStr?.trim();
+    if (!trimmed) return null;
+    const candidate =
+      trimmed.startsWith("http://") || trimmed.startsWith("https://")
+        ? trimmed
+        : `https://${trimmed}`;
+    const parsed = new URL(candidate);
+    if (!parsed.hostname || !parsed.hostname.includes(".")) return null;
+    return `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=64`;
   } catch {
-    return "";
+    return null;
   }
-}
+};
 
 interface InlineLinkItemProps {
   link: LinkItem;
@@ -79,6 +72,12 @@ export default function InlineLinkItem({
   const titleValidation = validateTitle(editTitle);
   const urlValidation = validateUrl(editUrl);
   const isFormValid = titleValidation.isValid && urlValidation.isValid;
+
+  // 파비콘 URL
+  const faviconUrl = getFaviconUrl(link.url);
+  const editFaviconUrl = getFaviconUrl(
+    urlValidation.isValid ? urlValidation.formattedUrl : editUrl
+  );
 
   const showTitleError = (touchedTitle || submitAttempted) && !titleValidation.isValid;
   const showUrlError = (touchedUrl || submitAttempted) && !urlValidation.isValid;
@@ -230,15 +229,6 @@ export default function InlineLinkItem({
           <div className="flex items-center gap-2 flex-wrap">
             <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 animate-pulse" />
             <span className="text-xs font-bold text-slate-900 dark:text-white">링크 인라인 수정</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 font-semibold border border-cyan-300 dark:border-cyan-800">
-              🔥 Firestore 연동
-            </span>
-            {link.updatedAt && (
-              <span className="text-[10px] text-slate-400 dark:text-zinc-400 flex items-center gap-1 font-mono">
-                <Clock className="w-2.5 h-2.5" />
-                <span>{formatKoreanTime(link.updatedAt)}</span>
-              </span>
-            )}
           </div>
           <button
             type="button"
@@ -310,13 +300,45 @@ export default function InlineLinkItem({
               <span>목적지 URL</span>
               <span className="text-rose-500">*</span>
             </label>
-            {urlValidation.isValid && urlValidation.isCorrected && (
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
-                <Check className="w-3 h-3" /> https:// 자동 적용됨
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {editFaviconUrl && (
+                <span className="text-[10px] text-[#0070d1] dark:text-[#38bdf8] font-semibold flex items-center gap-1 animate-in fade-in">
+                  <img
+                    key={editFaviconUrl}
+                    src={editFaviconUrl}
+                    alt=""
+                    className="w-3.5 h-3.5 rounded-xs object-contain"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                  <span>파비콘 감지됨</span>
+                </span>
+              )}
+              {urlValidation.isValid && urlValidation.isCorrected && (
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
+                  <Check className="w-3 h-3" /> https:// 자동 적용됨
+                </span>
+              )}
+            </div>
           </div>
           <div className="relative">
+            {/* Left Favicon / Link icon */}
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center w-5 h-5">
+              {editFaviconUrl ? (
+                <img
+                  key={editFaviconUrl}
+                  src={editFaviconUrl}
+                  alt=""
+                  className="w-4 h-4 rounded-xs object-contain"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              ) : (
+                <Link2 className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
+              )}
+            </div>
             <input
               type="text"
               value={editUrl}
@@ -324,7 +346,7 @@ export default function InlineLinkItem({
               onBlur={() => setTouchedUrl(true)}
               disabled={isSaving}
               placeholder="example.com 또는 https://..."
-              className={`w-full px-3.5 py-2.5 text-sm font-mono rounded-xl border bg-white dark:bg-zinc-800/80 text-slate-900 dark:text-white focus:outline-none transition-all placeholder:text-slate-400 ${
+              className={`w-full pl-10 pr-8 py-2.5 text-sm font-mono rounded-xl border bg-white dark:bg-zinc-800/80 text-slate-900 dark:text-white focus:outline-none transition-all placeholder:text-slate-400 ${
                 showUrlError
                   ? "border-rose-400 bg-rose-50/20 text-rose-900 dark:text-rose-200 focus:ring-1 focus:ring-rose-400"
                   : touchedUrl && urlValidation.isValid
@@ -337,9 +359,7 @@ export default function InlineLinkItem({
                 <AlertCircle className="w-4 h-4 text-rose-500 animate-in fade-in" />
               ) : touchedUrl && urlValidation.isValid ? (
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 animate-in fade-in" />
-              ) : (
-                <Link2 className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
-              )}
+              ) : null}
             </div>
           </div>
           {showUrlError && (
@@ -413,14 +433,24 @@ export default function InlineLinkItem({
           color: buttonStyle === "solid" ? theme.cardText : undefined,
         }}
       >
-        {/* Left balance spacer or click counter */}
-        <div className="w-10 sm:w-12 flex items-center justify-start flex-shrink-0">
-          {showClickCount && link.clickCount > 0 ? (
+        {/* Left balance spacer, favicon or click counter */}
+        <div className="w-10 sm:w-12 flex items-center justify-start flex-shrink-0 pl-1">
+          {faviconUrl ? (
+            <img
+              key={faviconUrl}
+              src={faviconUrl}
+              alt=""
+              className="w-5 h-5 rounded-md object-contain shadow-xs"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+            />
+          ) : showClickCount && link.clickCount > 0 ? (
             <span className="text-[10px] opacity-60 font-normal px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 backdrop-blur-sm">
               {link.clickCount}회
             </span>
           ) : (
-            <div className="w-3" />
+            <div className="w-4" />
           )}
         </div>
 
@@ -432,19 +462,13 @@ export default function InlineLinkItem({
           onClick={() => {
             if (onLinkClick) onLinkClick(link.id, link.url);
           }}
-          className="flex-1 min-w-0 text-center font-medium tracking-tight hover:underline flex flex-col items-center justify-center py-0.5 cursor-pointer"
+          className="flex-1 min-w-0 text-center font-medium tracking-tight hover:underline flex items-center justify-center py-0.5 cursor-pointer"
           title={`${link.title} 바로가기 (${link.url})`}
         >
           <div className="flex items-center justify-center gap-1.5 max-w-full">
             <span className="truncate max-w-[85%]">{link.title}</span>
             <ExternalLink className="w-3.5 h-3.5 opacity-40 group-hover:opacity-80 transition-opacity flex-shrink-0" />
           </div>
-          {link.updatedAt && (
-            <span className="text-[10px] opacity-65 font-normal tracking-tight flex items-center gap-1 mt-0.5">
-              <Clock className="w-2.5 h-2.5 opacity-75" />
-              <span>{formatKoreanTime(link.updatedAt)}</span>
-            </span>
-          )}
         </a>
 
         {/* Right Embedded Actions: [Edit] & [Delete] inside the Card */}

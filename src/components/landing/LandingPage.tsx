@@ -118,7 +118,7 @@ export default function LandingPage({ onLoginSuccess }: LandingPageProps) {
           {/* Description */}
           <p className="text-sm sm:text-base text-zinc-400 leading-relaxed mb-7 max-w-lg">
             인스타그램, 유튜브, 블로그, 포트폴리오를 한 곳에 모으세요.
-            Google 계정으로 로그인하면 나만의 개인화된 Firestore 저장소가 생성되어
+            Google 계정으로 로그인하면 나만의 링크 페이지가 생성되어
             링크를 자유롭게 인라인 수정하고 관리할 수 있습니다.
           </p>
 
@@ -177,8 +177,8 @@ export default function LandingPage({ onLoginSuccess }: LandingPageProps) {
                 <Zap className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-white">실시간 Firestore</h4>
-                <p className="text-[11px] text-zinc-400">users/&#123;uid&#125;/links 개인화</p>
+                <h4 className="text-xs font-bold text-white">간편한 링크 관리</h4>
+                <p className="text-[11px] text-zinc-400">나만의 고유 링크 목록 생성</p>
               </div>
             </div>
 
@@ -294,7 +294,7 @@ export default function LandingPage({ onLoginSuccess }: LandingPageProps) {
       {/* Footer Branding */}
       <footer className="w-full max-w-5xl py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500 border-t border-zinc-800/60 mt-10">
         <p>MyLink · 모바일 최적화 링크인바이오</p>
-        <p className="font-mono text-[11px]">Powered by Firebase Firestore & Next.js</p>
+        <p className="text-[11px]">© MyLink</p>
       </footer>
     </div>
   );

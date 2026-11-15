@@ -1,3 +1,12 @@
+export interface UserProfileData {
+  userId: string;
+  username: string; // URL slug용 (e.g. "jinmo")
+  displayName: string; // 표시 이름
+  bio: string; // 소개글
+  avatarUrl?: string;
+  updatedAt?: string;
+}
+
 export type ButtonShape = "pill" | "rounded" | "sharp";
 export type ButtonStyle = "solid" | "outline" | "glass";
 

@@ -1,20 +1,22 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useProfileStore } from "@/lib/store";
 import { useIsHydrated } from "@/lib/useIsHydrated";
 import { getTheme } from "@/lib/themes";
-import {
-  subscribeToFirestoreLinks,
-  getLinksFromFirestore,
-} from "@/lib/firestoreLinks";
 import { auth, googleProvider } from "@/lib/firebase";
 import { onAuthStateChanged, signInWithPopup, signOut, User } from "firebase/auth";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLinksQuery } from "@/hooks/useLinksQuery";
+import { useProfileQuery } from "@/hooks/useProfileQuery";
 import ProfileHeader from "./ProfileHeader";
 import InlineLinkItem from "./InlineLinkItem";
 import QuickEditor from "./QuickEditor";
 import AddLinkDialog from "./AddLinkDialog";
+import EditProfileModal from "./EditProfileModal";
 import LandingPage from "@/components/landing/LandingPage";
+import { initUserProfileIfAbsent, getUserProfile } from "@/lib/firestoreProfile";
 import {
   Edit3,
   Eye,
@@ -26,25 +28,34 @@ import {
   User as UserIcon,
   ChevronDown,
   Copy,
+  Settings,
+  ExternalLink,
 } from "lucide-react";
 
 export default function ProfilePageView() {
   const isHydrated = useIsHydrated();
   const store = useProfileStore();
+  const queryClient = useQueryClient();
 
   // Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
+  const activeUid = currentUser ? currentUser.uid : "anonymous";
+
+  // TanStack Query Cache Hooks
+  const { refetch: refetchLinks } = useLinksQuery(activeUid);
+  const { refetch: refetchProfile } = useProfileQuery(currentUser?.uid);
+
   // UI States
   const [isEditMode, setIsEditMode] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const [copiedToast, setCopiedToast] = useState(false);
   const [addedToastMessage, setAddedToastMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(true);
 
   // Close profile dropdown when clicking outside
   useEffect(() => {
@@ -68,7 +79,7 @@ export default function ProfilePageView() {
     ? store.links
     : store.links.filter((l) => l.isActive);
 
-  // 1. Listen to Firebase Auth state via onAuthStateChanged
+  // 1. Firebase Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
@@ -78,46 +89,25 @@ export default function ProfilePageView() {
         // Logged In: personalized welcome
         setAddedToastMessage(`${user.displayName || "사용자"}님, 반갑습니다! ✨`);
         setTimeout(() => setAddedToastMessage(null), 3000);
+
+        // Firestore users/{userId}/profile 1회성 조회/초기화 (실시간 X)
+        initUserProfileIfAbsent(user)
+          .then((p) => {
+            if (p) {
+              store.updateProfile({
+                username: p.username,
+                displayName: p.displayName,
+                bio: p.bio,
+                avatarUrl: p.avatarUrl || user.photoURL || store.avatarUrl,
+              });
+            }
+          })
+          .catch((err) => console.warn("프로필 초기화 오류:", err));
       }
     });
 
     return () => unsubscribe();
   }, []);
-
-  // 2. Real-time Firestore Subscription (users/{user.uid}/links)
-  useEffect(() => {
-    if (!isHydrated) return;
-
-    // 경로 개인화: 로그인 시 user.uid, 로그아웃 시 "anonymous"
-    const activeUid = currentUser ? currentUser.uid : "anonymous";
-    setIsSyncing(true);
-
-    let unsubscribe: (() => void) | undefined;
-    try {
-      unsubscribe = subscribeToFirestoreLinks(
-        (firestoreLinks) => {
-          if (firestoreLinks) {
-            // 사용자 경로에 링크가 있으면 동기화
-            // (새로 로그인한 사용자이고 링크가 0개면 빈 배열로 개인화된 상태 유지)
-            store.setLinks(firestoreLinks);
-          }
-          setIsSyncing(false);
-        },
-        (error) => {
-          console.warn("Firestore 실시간 동기화 알림:", error);
-          setIsSyncing(false);
-        },
-        activeUid
-      );
-    } catch (err) {
-      console.warn("Firestore 연결 설정 오류:", err);
-      setIsSyncing(false);
-    }
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [isHydrated, currentUser]);
 
   // Google Login Handler
   const handleGoogleSignIn = async () => {
@@ -166,15 +156,17 @@ export default function ProfilePageView() {
     }
   };
 
-  // Manual Refresh
+  // Manual Refresh with TanStack Query Invalidation
   const handleManualRefresh = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
     try {
-      const activeUid = currentUser ? currentUser.uid : "anonymous";
-      const firestoreLinks = await getLinksFromFirestore(activeUid);
-      store.setLinks(firestoreLinks);
-      setAddedToastMessage("최신 링크 데이터를 성공적으로 갱신했습니다! ✨");
+      await Promise.all([
+        queryClient.invalidateQueries(),
+        refetchLinks(),
+        refetchProfile(),
+      ]);
+      setAddedToastMessage("최신 데이터를 성공적으로 갱신했습니다! ✨");
       setTimeout(() => setAddedToastMessage(null), 2500);
     } catch (err) {
       console.error("Refresh error:", err);
@@ -190,8 +182,7 @@ export default function ProfilePageView() {
   };
 
   const handleAddSuccess = (newTitle: string) => {
-    const activePath = currentUser ? `users/${currentUser.uid}/links` : "users/anonymous/links";
-    setAddedToastMessage(`‘${newTitle}’ 링크가 Firestore(${activePath})에 저장되었습니다! 🎉`);
+    setAddedToastMessage(`‘${newTitle}’ 링크가 성공적으로 추가되었습니다! 🎉`);
     setTimeout(() => setAddedToastMessage(null), 3000);
   };
 
@@ -235,11 +226,11 @@ export default function ProfilePageView() {
         </div>
       )}
 
-      {/* Real-time sync or manual refresh indicator */}
-      {(isRefreshing || isSyncing) && (
+      {/* Manual refresh indicator */}
+      {isRefreshing && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-200 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 text-white text-xs font-semibold shadow-2xl backdrop-blur-md border border-white/20 pointer-events-none">
           <RefreshCw className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
-          <span>{isRefreshing ? "데이터 새로고침 중..." : "Firestore 동기화 중..."}</span>
+          <span>데이터 새로고침 중...</span>
         </div>
       )}
 
@@ -261,7 +252,7 @@ export default function ProfilePageView() {
           >
             <RefreshCw
               className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform ${
-                isRefreshing || isSyncing ? "animate-spin text-cyan-400" : ""
+                isRefreshing ? "animate-spin text-cyan-400" : ""
               }`}
             />
           </button>
@@ -291,6 +282,19 @@ export default function ProfilePageView() {
             )}
           </button>
 
+          {/* 내 개인별 공개 페이지 바로가기 버튼 */}
+          {currentUser && (
+            <Link
+              href={`/${encodeURIComponent(store.displayName || store.username || "user")}`}
+              target="_blank"
+              className="px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-1.5 bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 backdrop-blur-md text-current transition-all shadow-sm active:scale-95 cursor-pointer"
+              title="내 개인별 공개 페이지 열기 (새 탭)"
+            >
+              <span>내 페이지</span>
+              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+            </Link>
+          )}
+
           {/* Google Auth Status: [로그인] or [사용자 프로필 드롭다운] */}
           {isAuthLoading ? (
             <div className="w-24 h-8 rounded-full bg-black/5 dark:bg-white/5 animate-pulse" />
@@ -315,7 +319,7 @@ export default function ProfilePageView() {
                   </div>
                 )}
                 <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate max-w-[100px] sm:max-w-[150px]">
-                  {currentUser.displayName || currentUser.email?.split("@")[0] || "사용자"}님
+                  {store.displayName || currentUser.displayName || currentUser.email?.split("@")[0] || "사용자"}님
                 </span>
                 <ChevronDown
                   className={`w-3.5 h-3.5 text-current opacity-60 transition-transform duration-200 ${
@@ -343,9 +347,12 @@ export default function ProfilePageView() {
                       )}
                       <div className="flex flex-col min-w-0">
                         <span className="text-xs font-extrabold truncate">
-                          {currentUser.displayName || "마이링크 회원"}
+                          {store.displayName || currentUser.displayName || "마이링크 회원"}
                         </span>
-                        <span className="text-[11px] text-slate-500 dark:text-zinc-400 truncate">
+                        <span className="text-[11px] text-cyan-600 dark:text-cyan-400 font-mono truncate">
+                          @{store.username || currentUser.email?.split("@")[0]}
+                        </span>
+                        <span className="text-[10px] text-slate-400 dark:text-zinc-500 truncate">
                           {currentUser.email}
                         </span>
                       </div>
@@ -358,8 +365,47 @@ export default function ProfilePageView() {
                     </div>
                   </div>
 
-                  {/* 2. Menu Items: 내 링크 복사 & 내 페이지 미리보기 */}
+                  {/* 2. Menu Items: 프로필 수정 / 내 링크 복사 / 내 페이지 미리보기 */}
                   <div className="flex flex-col gap-1 py-1">
+                    {/* 프로필 수정 (마이페이지) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditProfileModalOpen(true);
+                        setIsProfileMenuOpen(false);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-zinc-800 text-left transition-colors cursor-pointer text-slate-800 dark:text-zinc-100"
+                    >
+                      <Settings className="w-4 h-4 text-cyan-500 flex-shrink-0" />
+                      <div className="flex flex-col">
+                        <span>프로필 수정 (마이페이지)</span>
+                        <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-normal">
+                          아이디, 이름, 소개글 변경
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* 내 공개 페이지 바로가기 (새 탭 이동) */}
+                    <Link
+                      href={`/${encodeURIComponent(store.displayName || store.username || "user")}`}
+                      target="_blank"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                      className="w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between hover:bg-slate-100 dark:hover:bg-zinc-800 text-left transition-colors cursor-pointer text-slate-800 dark:text-zinc-100"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <ExternalLink className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        <div className="flex flex-col">
+                          <span>내 페이지 바로가기</span>
+                          <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
+                            /{store.displayName || store.username}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                        방문자 뷰
+                      </span>
+                    </Link>
+
                     {/* 내 프로필 링크 복사 (순수 클립보드 복사) */}
                     <button
                       type="button"
@@ -452,8 +498,8 @@ export default function ProfilePageView() {
 
         {/* Profile Header */}
         <ProfileHeader
-          displayName={currentUser?.displayName || store.displayName}
-          username={currentUser ? currentUser.email?.split("@")[0] || store.username : store.username}
+          displayName={store.displayName || currentUser?.displayName || "사용자"}
+          username={store.username || (currentUser?.email?.split("@")[0] || "user")}
           bio={store.bio}
           avatarUrl={currentUser?.photoURL || store.avatarUrl}
           theme={theme}
@@ -512,6 +558,16 @@ export default function ProfilePageView() {
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         onSuccess={handleAddSuccess}
+      />
+
+      {/* Edit Profile Modal (마이페이지 프로필 수정) */}
+      <EditProfileModal
+        open={isEditProfileModalOpen}
+        onOpenChange={setIsEditProfileModalOpen}
+        onSuccess={(saved) => {
+          setAddedToastMessage(`‘${saved.displayName}’ 프로필이 성공적으로 저장되었습니다! 🎉`);
+          setTimeout(() => setAddedToastMessage(null), 3000);
+        }}
       />
 
       {/* Footer Branding */}

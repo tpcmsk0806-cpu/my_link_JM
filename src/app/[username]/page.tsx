@@ -1,7 +1,8 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getProfileByUsername, getLinksByProfileId, recordPageView } from "@/lib/db";
-import ProfileView from "@/components/ProfileView";
+import { findUserByDisplayNameOrUsername } from "@/lib/firestoreProfile";
+import { getLinksFromFirestore } from "@/lib/firestoreLinks";
+import PublicProfilePageView from "@/components/profile/PublicProfilePageView";
 
 interface PageProps {
   params: Promise<{
@@ -11,50 +12,41 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { username } = await params;
-  const profile = getProfileByUsername(username);
+  const decodedName = decodeURIComponent(username || "");
+  const profile = await findUserByDisplayNameOrUsername(decodedName);
 
-  if (!profile) {
+  if (!profile || !profile.username) {
     return {
       title: "프로필을 찾을 수 없습니다 | 마이링크",
-      description: "존재하지 않는 마이링크 사용자 페이지입니다.",
+      description: "존재하지 않거나 비공개된 마이링크 사용자 페이지입니다.",
     };
   }
 
   return {
     title: `${profile.displayName} (@${profile.username}) | 마이링크`,
-    description: profile.bio || `${profile.displayName}의 마이링크 프로필입니다.`,
+    description: profile.bio || `${profile.displayName}님의 공식 마이링크 모음입니다.`,
     openGraph: {
       title: `${profile.displayName} | 마이링크`,
-      description: profile.bio || `${profile.displayName}의 공식 링크 모음`,
+      description: profile.bio || `${profile.displayName}님의 모든 채널을 한눈에 확인하세요.`,
       images: profile.avatarUrl ? [{ url: profile.avatarUrl }] : [],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: `${profile.displayName} | 마이링크`,
-      description: profile.bio,
-      images: profile.avatarUrl ? [profile.avatarUrl] : [],
     },
   };
 }
 
 export default async function PublicProfilePage({ params }: PageProps) {
   const { username } = await params;
-  const profile = getProfileByUsername(username);
+  const decodedName = decodeURIComponent(username || "");
+  
+  // 1. displayName 또는 username으로 유저 검색
+  const userProfile = await findUserByDisplayNameOrUsername(decodedName);
 
-  if (!profile) {
+  // 2. 일치하는 유저가 없거나 username이 없으면 404 페이지 이동
+  if (!userProfile || !userProfile.username) {
     notFound();
   }
 
-  // Record page view on server
-  recordPageView(profile.id);
+  // 3. Firestore users/{userId}/links 에서 링크 목록 조회
+  const links = await getLinksFromFirestore(userProfile.userId);
 
-  const links = getLinksByProfileId(profile.id);
-
-  return (
-    <main className="min-h-screen w-full flex flex-col justify-center items-center">
-      <div className="w-full max-w-lg min-h-screen flex flex-col">
-        <ProfileView profile={profile} links={links} isPreview={false} />
-      </div>
-    </main>
-  );
+  return <PublicProfilePageView profile={userProfile} links={links} />;
 }

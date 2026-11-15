@@ -9,7 +9,6 @@ import {
   query,
   orderBy,
   serverTimestamp,
-  onSnapshot,
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
 import { LinkItem } from "@/types";
@@ -160,40 +159,4 @@ export async function deleteLinkFromFirestore(id: string, userId?: string): Prom
   const uid = resolveUid(userId);
   const docRef = doc(db, "users", uid, "links", id);
   await deleteDoc(docRef);
-}
-
-/**
- * Subscribe to real-time updates for `users/{uid}/links`
- */
-export function subscribeToFirestoreLinks(
-  onLinksUpdate: (links: LinkItem[]) => void,
-  onError?: (error: Error) => void,
-  userId?: string
-) {
-  const uid = resolveUid(userId);
-  const colRef = getUserLinksCol(uid);
-  const q = query(colRef, orderBy("orderIndex", "asc"));
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const links: LinkItem[] = snapshot.docs.map((d) => {
-        const data = d.data();
-        return {
-          id: d.id,
-          profileId: data.profileId || uid,
-          title: data.title || "",
-          url: data.url || "",
-          orderIndex: data.orderIndex ?? 0,
-          isActive: data.isActive !== undefined ? data.isActive : true,
-          clickCount: data.clickCount ?? 0,
-          createdAt: data.createdAt || new Date().toISOString(),
-          updatedAt: data.updatedAt || undefined,
-        };
-      });
-      onLinksUpdate(links);
-    },
-    (err) => {
-      if (onError) onError(err);
-    }
-  );
 }

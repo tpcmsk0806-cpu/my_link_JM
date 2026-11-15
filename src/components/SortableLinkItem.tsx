@@ -20,31 +20,24 @@ import {
   AlertCircle,
   CheckCircle2,
   Link2,
-  Clock,
 } from "lucide-react";
 
-function formatKoreanTime(dateStr?: string): string {
-  if (!dateStr) return "";
+// Google Favicon 서비스 기반 파비콘 URL 추출
+const getFaviconUrl = (urlStr: string) => {
   try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return "";
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 1) return "방금 전 수정됨";
-    if (diffMins < 60) return `${diffMins}분 전 수정됨`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}시간 전 수정됨`;
-    return new Intl.DateTimeFormat("ko-KR", {
-      month: "numeric",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(d) + " 수정됨";
+    const trimmed = urlStr?.trim();
+    if (!trimmed) return null;
+    const candidate =
+      trimmed.startsWith("http://") || trimmed.startsWith("https://")
+        ? trimmed
+        : `https://${trimmed}`;
+    const parsed = new URL(candidate);
+    if (!parsed.hostname || !parsed.hostname.includes(".")) return null;
+    return `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=64`;
   } catch {
-    return "";
+    return null;
   }
-}
+};
 
 interface SortableLinkItemProps {
   link: LinkItem;
@@ -211,9 +204,6 @@ export default function SortableLinkItem({
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                 <span className="text-xs font-bold text-white">링크 인라인 편집</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-400 border border-cyan-800 font-medium">
-                  Firestore updateDoc 연동
-                </span>
               </div>
               <button
                 type="button"
@@ -392,6 +382,20 @@ export default function SortableLinkItem({
               <GripVertical className="w-5 h-5" />
             </button>
 
+            {/* Favicon */}
+            {getFaviconUrl(link.url) && (
+              <div className="w-8 h-8 rounded-xl bg-zinc-800/90 border border-zinc-700/60 flex items-center justify-center flex-shrink-0">
+                <img
+                  src={getFaviconUrl(link.url)!}
+                  alt=""
+                  className="w-4 h-4 rounded-xs object-contain"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              </div>
+            )}
+
             {/* Content Area */}
             <div className="flex-1 min-w-0 pr-2">
               <div className="flex items-center gap-2">
@@ -419,14 +423,6 @@ export default function SortableLinkItem({
                   <span>{link.url}</span>
                   <ExternalLink className="w-3 h-3 flex-shrink-0" />
                 </a>
-
-                {link.updatedAt && (
-                  <span className="text-[11px] text-zinc-500 flex items-center gap-1 font-mono">
-                    <span>·</span>
-                    <Clock className="w-3 h-3 text-zinc-600" />
-                    <span>{formatKoreanTime(link.updatedAt)}</span>
-                  </span>
-                )}
               </div>
             </div>
 

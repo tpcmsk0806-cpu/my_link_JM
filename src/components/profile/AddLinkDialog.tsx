@@ -19,7 +19,6 @@ import { validateTitle, validateUrl } from "@/lib/validation";
 import {
   Link2,
   Plus,
-  Sparkles,
   Check,
   AlertCircle,
   CheckCircle2,
@@ -33,9 +32,22 @@ interface AddLinkDialogProps {
   onSuccess?: (newLinkTitle: string) => void;
 }
 
-const EMOJI_PRESETS = [
-  "🛍️", "📺", "💻", "📝", "☕", "🎨", "⭐", "🚀", "🔗", "📸", "💬", "💼"
-];
+// Google Favicon 서비스 기반 파비콘 URL 추출
+const getFaviconUrl = (urlStr: string) => {
+  try {
+    const trimmed = urlStr?.trim();
+    if (!trimmed) return null;
+    const candidate =
+      trimmed.startsWith("http://") || trimmed.startsWith("https://")
+        ? trimmed
+        : `https://${trimmed}`;
+    const parsed = new URL(candidate);
+    if (!parsed.hostname || !parsed.hostname.includes(".")) return null;
+    return `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=64`;
+  } catch {
+    return null;
+  }
+};
 
 export default function AddLinkDialog({
   open,
@@ -71,15 +83,6 @@ export default function AddLinkDialog({
   const showTitleError = (touchedTitle || submitAttempted) && !titleValidation.isValid;
   const showUrlError = (touchedUrl || submitAttempted) && !urlValidation.isValid;
 
-  const handleEmojiSelect = (emoji: string) => {
-    setTouchedTitle(true);
-    if (!title) {
-      setTitle(`${emoji} `);
-    } else {
-      setTitle(`${emoji} ${title}`);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitAttempted(true);
@@ -114,9 +117,9 @@ export default function AddLinkDialog({
         onSuccess(title.trim());
       }
     } catch (err: any) {
-      console.error("Firebase 링크 저장 오류:", err);
+      console.error("링크 저장 오류:", err);
       setSubmitError(
-        err?.message || "Firebase 저장 중 오류가 발생했습니다."
+        err?.message || "저장 중 오류가 발생했습니다."
       );
     } finally {
       setIsSubmitting(false);
@@ -140,12 +143,17 @@ export default function AddLinkDialog({
 
   const activeUid = auth.currentUser?.uid || "anonymous";
 
+  // 감지된 파비콘 URL
+  const detectedFavicon = getFaviconUrl(
+    urlValidation.isValid ? urlValidation.formattedUrl : url
+  );
+
   // Live preview link card object
   const previewLink: LinkItem = {
     id: "preview-link",
     profileId: activeUid,
     title: title.trim() || "버튼 제목 미리보기",
-    url: urlValidation.isValid ? urlValidation.formattedUrl : "https://example.com",
+    url: urlValidation.isValid ? urlValidation.formattedUrl : url.trim() || "https://example.com",
     orderIndex: 0,
     isActive: true,
     clickCount: 0,
@@ -156,21 +164,17 @@ export default function AddLinkDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent onClose={handleClose} className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-2xl bg-[#0070d1]/10 text-[#0070d1] flex items-center justify-center mb-2 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#0070d1]/10 text-[#0070d1] flex items-center justify-center shadow-sm">
               <Plus className="w-5 h-5 stroke-[2.5]" />
             </div>
-            <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-medium">
-              🔥 Firestore: users/{activeUid}/links
-            </span>
+            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
+              새 링크 추가하기
+            </DialogTitle>
           </div>
-          <DialogTitle>새 링크 추가하기</DialogTitle>
-          <DialogDescription>
-            방문자에게 안내할 링크의 제목과 목적지 주소를 입력하세요.
-          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1" noValidate>
           {/* ================= Title Input ================= */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -200,7 +204,7 @@ export default function AddLinkDialog({
                   setTitle(e.target.value);
                 }}
                 onBlur={() => setTouchedTitle(true)}
-                placeholder="예: 🛍️ 2026 다이어리 마켓"
+                placeholder="예: 내 인스타그램, 공식 블로그, 포트폴리오"
                 maxLength={45}
                 className={`w-full px-3.5 py-2.5 text-sm rounded-xl border transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 ${
                   showTitleError
@@ -228,24 +232,6 @@ export default function AddLinkDialog({
                 <span>{titleValidation.error}</span>
               </p>
             )}
-
-            {/* Quick Emoji Bar */}
-            <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
-              <span className="text-[11px] text-slate-400 dark:text-zinc-500 shrink-0 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-500" /> 추천:
-              </span>
-              {EMOJI_PRESETS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => handleEmojiSelect(emoji)}
-                  className="px-1.5 py-0.5 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors shrink-0 text-sm active:scale-95"
-                  title="이모지 삽입"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* ================= URL Input ================= */}
@@ -255,14 +241,47 @@ export default function AddLinkDialog({
                 <span>목적지 URL</span>
                 <span className="text-rose-500">*</span>
               </label>
-              {urlValidation.isValid && urlValidation.isCorrected && (
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
-                  <Check className="w-3 h-3" /> https:// 자동 적용됨
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {detectedFavicon && (
+                  <span className="text-[11px] text-[#0070d1] dark:text-[#38bdf8] font-semibold flex items-center gap-1 animate-in fade-in">
+                    <img
+                      key={detectedFavicon}
+                      src={detectedFavicon}
+                      alt=""
+                      className="w-3.5 h-3.5 rounded-xs object-contain"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    <span>파비콘 감지됨</span>
+                  </span>
+                )}
+                {urlValidation.isValid && urlValidation.isCorrected && (
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5">
+                    <Check className="w-3 h-3" /> https:// 자동 적용됨
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="relative">
+              {/* Left Favicon / Link icon */}
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center w-5 h-5">
+                {detectedFavicon ? (
+                  <img
+                    key={detectedFavicon}
+                    src={detectedFavicon}
+                    alt=""
+                    className="w-4 h-4 rounded-xs object-contain animate-in fade-in"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <Link2 className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
+                )}
+              </div>
+
               <input
                 type="text"
                 value={url}
@@ -271,7 +290,7 @@ export default function AddLinkDialog({
                 }}
                 onBlur={() => setTouchedUrl(true)}
                 placeholder="example.com 또는 https://..."
-                className={`w-full pl-3.5 pr-8 py-2.5 text-sm rounded-xl border transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 ${
+                className={`w-full pl-10 pr-8 py-2.5 text-sm rounded-xl border transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 ${
                   showUrlError
                     ? "border-rose-400 bg-rose-50/20 text-rose-900 dark:text-rose-200 focus:ring-rose-400 focus:border-rose-400"
                     : touchedUrl && urlValidation.isValid
@@ -284,9 +303,7 @@ export default function AddLinkDialog({
                   <AlertCircle className="w-4 h-4 text-rose-500 animate-in fade-in" />
                 ) : touchedUrl && urlValidation.isValid ? (
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 animate-in fade-in" />
-                ) : (
-                  <Link2 className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -371,7 +388,7 @@ export default function AddLinkDialog({
               {isSubmitting ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Firebase 저장 중...</span>
+                  <span>저장 중...</span>
                 </>
               ) : (
                 <>
