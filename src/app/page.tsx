@@ -2,12 +2,18 @@ import { Metadata } from "next";
 import ProfilePageView from "@/components/profile/ProfilePageView";
 
 export const metadata: Metadata = {
-  title: "마이링크 (MyLink) — 모바일 최적화 링크인바이오",
+  title: "세상의 모든 나를 하나의 링크에 담다",
   description:
-    "사용자의 다양한 온라인 채널을 단 하나의 모바일 최적화 페이지로 통합하여 보여주는 링크인바이오 서비스",
+    "인스타그램, 유튜브, 블로그, 포트폴리오를 한곳에 모으세요. 단 1초 만에 나만의 프로필 페이지를 만들고 실시간 방문자 클릭 수까지 손쉽게 관리할 수 있습니다.",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: "마이링크 (MyLink) — 모바일 최적화 링크인바이오",
-    description: "단 하나의 링크로 당신의 모든 채널을 연결하세요.",
+    title: "마이링크 (MyLink) — 세상의 모든 나를 하나의 링크에 담다",
+    description:
+      "인스타그램, 유튜브, 블로그, 포트폴리오를 한곳에 모으고 실시간 클릭을 분석하세요.",
+    url: "/",
+    type: "website",
   },
 };
 

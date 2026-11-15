@@ -17,18 +17,45 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!profile || !profile.username) {
     return {
-      title: "프로필을 찾을 수 없습니다 | 마이링크",
+      title: "프로필을 찾을 수 없습니다",
       description: "존재하지 않거나 비공개된 마이링크 사용자 페이지입니다.",
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
+  const title = `${profile.displayName} (@${profile.username})`;
+  const description =
+    profile.bio ||
+    `${profile.displayName}님의 공식 마이링크 모음입니다. 유튜브, 인스타그램, 블로그 등 모든 채널을 한눈에 확인하세요.`;
+
   return {
-    title: `${profile.displayName} (@${profile.username}) | 마이링크`,
-    description: profile.bio || `${profile.displayName}님의 공식 마이링크 모음입니다.`,
+    title,
+    description,
+    keywords: [
+      profile.displayName,
+      profile.username,
+      "마이링크",
+      "링크인바이오",
+      "프로필 링크",
+    ],
+    alternates: {
+      canonical: `/${profile.username}`,
+    },
     openGraph: {
-      title: `${profile.displayName} | 마이링크`,
-      description: profile.bio || `${profile.displayName}님의 모든 채널을 한눈에 확인하세요.`,
-      images: profile.avatarUrl ? [{ url: profile.avatarUrl }] : [],
+      title: `${title} | 마이링크`,
+      description,
+      url: `/${profile.username}`,
+      siteName: "마이링크 (MyLink)",
+      type: "profile",
+      locale: "ko_KR",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | 마이링크`,
+      description,
     },
   };
 }

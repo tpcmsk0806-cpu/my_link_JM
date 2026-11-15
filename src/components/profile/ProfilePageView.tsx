@@ -116,13 +116,15 @@ export default function ProfilePageView() {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (err: any) {
-      console.error("Google 로그인 오류:", err);
       if (
-        err.code !== "auth/popup-closed-by-user" &&
-        err.code !== "auth/cancelled-popup-request"
+        err.code === "auth/popup-closed-by-user" ||
+        err.code === "auth/cancelled-popup-request"
       ) {
-        alert("Google 로그인 중 오류가 발생했습니다: " + (err.message || err.code));
+        // 사용자가 로그인 팝업을 직접 닫은 경우 경고창이나 에러 로그를 띄우지 않음
+        return;
       }
+      console.error("Google 로그인 오류:", err);
+      alert("Google 로그인 중 오류가 발생했습니다: " + (err.message || err.code));
     }
   };
 
